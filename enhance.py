@@ -61,11 +61,16 @@ def mse_channels_rgb(img1_bgr: np.ndarray, img2_bgr: np.ndarray):
 # TRAINING (allowed to use day):
 # store reference CDFs (day image statistics)
 # ============================================================
-night_path = "/mnt/c/Users/lucia/Desktop/ECE545/night.jpg"
-day_path   = "/mnt/c/Users/lucia/Desktop/ECE545/day.jpg"
+night_path = "night.jpg"
+day_path   = "day.jpg"
 
 night = cv2.imread(night_path, cv2.IMREAD_COLOR)  # BGR uint8
 day   = cv2.imread(day_path,   cv2.IMREAD_COLOR)
+
+if night is None:
+    raise FileNotFoundError(f"Could not load night image from {night_path}")
+if day is None:
+    raise FileNotFoundError(f"Could not load day image from {day_path}")
 
 day_rgb = day[:, :, ::-1]
 ref_cdfs_rgb = [cdf_from_hist(hist_256(day_rgb[..., c])) for c in range(3)]
@@ -90,7 +95,7 @@ if GAMMA != 1.0:
 enhanced = match_histogram_rgb(x, ref_cdfs_rgb)
 
 # Save result
-out_path = "/mnt/c/Users/lucia/Desktop/ECE545/enhanced.jpg"
+out_path = "enhanced.jpg"
 cv2.imwrite(out_path, enhanced)
 
 # Report MSE
