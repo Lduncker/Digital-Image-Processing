@@ -61,7 +61,7 @@ def train(model, dataloader, epochs=10):
             optimizer.zero_grad()
 
             output = model(night)
-            loss = criterion(output, day)
+            loss = RGB_MSE(output, day)
 
             loss.backward()
             optimizer.step()
@@ -137,7 +137,12 @@ def loadImages():
     return nightSet, daySet
 
 def RGB_MSE(output, day):
-    pass
+    MSER = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 0, :, :] - day[:, 0, :, :])**2)
+    MSEG = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 1, :, :] - day[:, 1, :, :])**2)
+    MSEB = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 2, :, :] - day[:, 2, :, :])**2)
+    
+    MSEOverall = (MSER + MSEG + MSEB) / 3
+    return MSEOverall
 
 if __name__ == "__main__":
     nightSet, daySet = loadImages()
@@ -181,8 +186,8 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = UNet().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-6)
-    criterion = nn.MSELoss()   # L1 works better than MSE for images
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    #criterion = RGB_MSE   # L1 works better than MSE for images
     
     #load the data
     trainTensor = TensorDataset(trainX, trainY)
