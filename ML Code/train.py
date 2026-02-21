@@ -1,107 +1,193 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
 
 IM_WIDTH = 1024
 IM_HEIGHT = 737
-NUM_INPUT = IM_WIDTH * IM_HEIGHT
-NUM_HIDDEN = 20
-NUM_OUTPUT = IM_WIDTH * IM_HEIGHT
+NUM_CHANNELS = 3
 
-def relu (z):
-    return np.maximum(0, z)
+class UNet(nn.Module):
+    def __init__(self):
+        super().__init__()
 
-def reluprime(z):
-    z[z > 0] = 1
-    z[z <= 0] = 0
-    return z
-    
-def forward_prop (x, y, W1, b1, W2, b2):
-    z = W1 @ x + np.reshape(b1, (b1.shape[0],1))
-    h = relu(z)
-    yhat = (W2 @ h + b2).squeeze()
-    
-    loss = 1/2 * np.mean((y-yhat) ** 2)
-    #can normalize here if desired
-    return loss, x, z, h, yhat
-   
-def back_prop (X, y, W1, b1, W2, b2):
-    loss, x, z, h, yhat = forward_prop(X, y, W1, b1, W2, b2)
-    
-    g = ((np.atleast_2d(yhat - y).T @ W2) * reluprime(z.T)).T
-    
-    gradW1 = g @ x.T + 1e-4 * W1
-    gradb1 = np.mean(g, axis=1)
-    gradW2 = np.atleast_2d(yhat - y) @ h.T + 1e-4 * W2
-    gradb2 = np.mean(yhat - y)
-    
-    return gradW1, gradb1, gradW2, gradb2
+        #encoder
+        self.enc1 = nn.Conv2d(3, 64, 4, stride=2, padding=1)   #737x1024 to 368x512
+        self.enc2 = nn.Conv2d(64, 128, 4, stride=2, padding=1)
+        self.enc3 = nn.Conv2d(128, 256, 4, stride=2, padding=1)
 
-def train (trainX, trainY, W1, b1, W2, b2, testX, testY, epsilon = 1e-6, batchSize = 32, numEpochs = 500):
-    #shuffle the indices for training, then use them to access training images/labels together
-    shuffledIndices = np.random.permutation(trainX.shape[1])
-    
-    #number of epochs
-    for e in range(numEpochs):
-        for i in range(int(trainX.shape[1] / batchSize)):
-            miniBatch = shuffledIndices[i*batchSize:(i+1)*batchSize]
-            
-            #perform backward prop to get the gradients needed
-            gradW1, gradb1, gradW2, gradb2 = back_prop(trainX[:, miniBatch], trainY[miniBatch], W1, b1, W2, b2)
-            
-            #update weights and biases
-            W1 = W1 - epsilon * gradW1
-            W2 = W2 - epsilon * gradW2
-            b1 = b1 - epsilon * gradb1
-            b2 = b2 - epsilon * gradb2
+        #decoder
+        self.dec1 = nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1)
+        self.dec2 = nn.ConvTranspose2d(256, 64, 4, stride=2, padding=1)
+        self.dec3 = nn.ConvTranspose2d(128, 3, 4, stride=2, padding=1)
+
+        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
+
+    def forward(self, x):
+        #encoder
+        e1 = self.relu(self.enc1(x))
+        e2 = self.relu(self.enc2(e1))
+        e3 = self.relu(self.enc3(e2))
+
+        #decoder
+        d1 = self.relu(self.dec1(e3))
+        d1 = torch.cat([d1, e2], dim=1)
+
+        d2 = self.relu(self.dec2(d1))
+        d2 = torch.cat([d2, e1], dim=1)
+
+        d3 = self.dec3(d2)
+
+        if d3.size()[2:] != x.size()[2:]:
+            d3 = F.interpolate(d3, size=x.size()[2:], mode='bilinear', align_corners=False)
+
         
-        #Get a look at how accuracy is improving
-        loss, a, b, c, d = forward_prop(testX, testY, W1, b1, W2, b2)
-        print("loss at epoch ", e)
-        print(loss)
-    return W1, b1, W2, b2
+        return torch.sigmoid(d3)
 
-def show_weight_vectors (W1):
-    # Show weight vectors in groups of 5.
-    for i in range(NUM_HIDDEN//5):
-        plt.imshow(np.hstack([ np.pad(np.reshape(W1[idx,:], [ IM_WIDTH, IM_WIDTH ]), 2, mode='constant') for idx in range(i*5, (i+1)*5) ]), cmap='gray'), plt.show()
+def train(model, dataloader, epochs=10):
+    model.train()
+    
+    for epoch in range(epochs):
+        total_loss = 0
+        
+        for night, day in dataloader:
+            night = night.to(device)
+            day = day.to(device)
+
+            optimizer.zero_grad()
+
+            output = model(night)
+            loss = criterion(output, day)
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        print(f"Epoch {epoch}: Loss {total_loss / len(dataloader)}")
+
+def show_results(model, night_img, day_img):
+    model.eval()
+
+    with torch.no_grad():
+        input_tensor = night_img.unsqueeze(0).to(device)
+        output = model(input_tensor)[0].cpu()
+
+    night_np = night_img.permute(1,2,0).cpu().numpy()
+    day_np = day_img.permute(1,2,0).cpu().numpy()
+    output_np = output.permute(1,2,0).numpy()
+
+    plt.figure(figsize=(18,6))
+
+    plt.subplot(1,3,1)
+    plt.imshow(night_np)
+    plt.title("Original Night")
+    plt.axis("off")
+
+    plt.subplot(1,3,2)
+    plt.imshow(day_np)
+    plt.title("Original Day")
+    plt.axis("off")
+
+    plt.subplot(1,3,3)
+    plt.imshow(output_np)
+    plt.title("Transformed Day")
+    plt.axis("off")
+
     plt.show()
 
-def loadData (which, mu = None):
-    images = np.load("age_regression_X{}.npy".format(which)).reshape(-1, 48**2).T
-    labels = np.load("age_regression_y{}.npy".format(which))
-
-    if which == "tr":
-        mu = np.mean(images)
+def loadImages():
+    folderPath = 'ML Code/training_data'
+    labelsPath = 'ML Code/labels/label.txt'
+    outputPath = 'ML Code/transformedFiles'
+    
+    labels = np.loadtxt(labelsPath, dtype=str)
+    
+    nightList = []
+    dayList = []
+    
+    for label in labels:
+        img = Image.open(folderPath + "/" + label[0]).convert("RGB")
+        img_np_array = np.array(img)
+        print(img_np_array.shape)
         
-        #data augmentation
-        flippedImages = np.fliplr(images)
-        np.hstack((images, flippedImages))
-        np.hstack((labels, labels))
+        imgName = outputPath + "/" + label[0][0:len(label[0])-4]
         
-        noise = np.random.normal(0, 1e-2, size=(2304, 5000))
-        noisedImages = noise
-        np.hstack((images, noisedImages))
-        np.hstack((labels, labels))
+        if int(label[2]) < 7 or int(label[2]) > 17:
+            imgName += " Night"
+            nightList.append(img_np_array)
+        else:
+            imgName += " Day"
+            dayList.append(img_np_array)
+        
+        np.save(imgName, img_np_array)
+    
+    nightSet = np.array(nightList)
+    daySet = np.array(dayList)
+    
+    print(nightSet.shape)
+    print(daySet.shape)
+    
+    print(labels)
+    
+    return nightSet, daySet
 
-    # TODO: you may wish to perform data augmentation (e.g., left-right flipping, adding Gaussian noise).
-
-    return images - mu, labels, mu
-
-#
+def RGB_MSE(output, day):
+    pass
 
 if __name__ == "__main__":
-    # Load data
-    if "trainX" not in globals():
-        trainX, trainY, mu = loadData("tr")
-        testX, testY, _ = loadData("te", mu)
-
-    # Initialize weights to reasonable random values
-    W1 = 2*(np.random.random(size=(NUM_HIDDEN, NUM_INPUT))/NUM_INPUT**0.5) - 1./NUM_INPUT**0.5
-    b1 = 0.01 * np.ones(NUM_HIDDEN)
-    W2 = 2*(np.random.random(size=(NUM_OUTPUT, NUM_HIDDEN))/NUM_HIDDEN**0.5) - 1./NUM_HIDDEN**0.5
-    b2 = np.mean(trainY)
-
-    # Train NN
-    W1, b1, W2, b2 = train(trainX, trainY, W1, b1, W2, b2, testX, testY)
+    nightSet, daySet = loadImages()
     
-    show_weight_vectors(W1)
+    #allow randomness
+    #this variable can be changed to false if desired
+    #if True: will randomly match day and night time images
+    #if False: will cut off the excess night time images and match them according to input order
+    randomness = True
+    
+    if randomness:
+        nightSet = nightSet[nightSet.shape[0] - daySet.shape[0]:]
+        
+        shuffledIndices = np.random.permutation(nightSet.shape[0])
+        
+        nightSet = nightSet[shuffledIndices]
+    else:
+        nightSet = nightSet[nightSet.shape[0] - daySet.shape[0]]
+        pass
+    
+    #convert to tensors
+    #change from (number, height, width, channel) to (number channel, height, width) cause pytorch wants that
+    #also divide by 255 to normalize for faster training
+    nightSet = torch.tensor(nightSet / 255.0, dtype=torch.float32).permute(0,3,1,2)
+    daySet   = torch.tensor(daySet / 255.0, dtype=torch.float32).permute(0,3,1,2)
+    
+    #divide into training and validation sets
+    print(nightSet.shape)
+    portion = int(nightSet.shape[0] * 0.8)
+    trainX = nightSet[:portion]
+    trainY = daySet[:portion]
+    testX = nightSet[portion:]
+    testY = daySet[portion:]
+    
+    print(trainX.shape)
+    print(trainY.shape)
+    print(testX.shape)
+    print(testY.shape)
+    
+    #prepare the model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model = UNet().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-6)
+    criterion = nn.MSELoss()   # L1 works better than MSE for images
+    
+    #load the data
+    trainTensor = TensorDataset(trainX, trainY)
+    trainLoader = DataLoader(trainTensor, batch_size = 2, shuffle = True)
+    
+    train(model, trainLoader, epochs = 100)
+    
+    show_results(model, testX[0], testY[0])
