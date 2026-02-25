@@ -105,9 +105,9 @@ def show_results(model, night_img, day_img):
     return output
 
 def loadImages():
-    folderPath = 'ML Code/training_data_selective'
+    folderPath = 'ML Code/training_data'
     labelsPath = 'ML Code/labels/label.txt'
-    outputPath = 'ML Code/transformedFiles_selective'
+    outputPath = 'ML Code/transformedFiles'
     
     labels = np.loadtxt(labelsPath, dtype=str)
     
