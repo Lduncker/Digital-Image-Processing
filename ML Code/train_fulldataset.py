@@ -10,6 +10,9 @@ IM_WIDTH = 1024
 IM_HEIGHT = 737
 NUM_CHANNELS = 3
 
+#Initializes and runs each layer
+#uses an auto-encoder to make the image smaller to process in reasonable time
+
 class UNet(nn.Module):
     def __init__(self):
         super().__init__()
@@ -48,6 +51,7 @@ class UNet(nn.Module):
         
         return torch.sigmoid(d3)
 
+#trains the model using SGD
 def train(model, dataloader, epochs=10):
     model.train()
     
@@ -70,6 +74,8 @@ def train(model, dataloader, epochs=10):
 
         print(f"Epoch {epoch}: Loss {total_loss / len(dataloader)}")
 
+#takes the model and a night and day image and shows both along with the transformed day-approximation
+#used for seeing visually what the model is doing
 def show_results(model, night_img, day_img):
     model.eval()
 
@@ -104,6 +110,7 @@ def show_results(model, night_img, day_img):
     
     return output
 
+#loads in all the images and assigns them to be day or night based on the timestamp they were taken
 def loadImages():
     folderPath = 'ML Code/training_data'
     labelsPath = 'ML Code/labels/label.txt'
@@ -115,12 +122,22 @@ def loadImages():
     dayList = []
     
     for label in labels:
-        img = Image.open(folderPath + "/" + label[0]).convert("RGB")
+        try:
+            img = Image.open(folderPath + "/" + label[0]).convert("RGB")
+        except:
+            continue
+                
+        if img.size != (IM_WIDTH, IM_HEIGHT):
+            #if image size doesn't match resize using Lanczos
+            img = img.resize((IM_WIDTH, IM_HEIGHT), Image.Resampling.LANCZOS)
+        
         img_np_array = np.array(img)
         print(img_np_array.shape)
         
         imgName = outputPath + "/" + label[0][0:len(label[0])-4]
         
+        #assign a day/night label
+        #this isn't perfect as obv time zones vary stuff so some manual label tweaking is needed in label.txt for any outliers
         if int(label[2]) < 7 or int(label[2]) > 17:
             imgName += " Night"
             nightList.append(img_np_array)
@@ -140,24 +157,39 @@ def loadImages():
     
     return nightSet, daySet
 
+#calculate the RGB_MSE for all images in a big list
 def RGB_MSE(output, day):
     MSER = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 0, :, :] - day[:, 0, :, :])**2)
-    print(MSER)
+    #print(MSER)
     MSEG = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 1, :, :] - day[:, 1, :, :])**2)
-    print(MSEG)
+    #print(MSEG)
     MSEB = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 2, :, :] - day[:, 2, :, :])**2)
-    print(MSEB)
+    #print(MSEB)
     
     MSEOverall = (MSER + MSEG + MSEB) / 3
     return MSEOverall
 
+#calculates the RGB MSE for two images with out the /255.0 regularization
+def unregularized_RGB_MSE(output, day):
+    MSER = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[0, :, :] - day[0, :, :])**2)
+    #print(MSER)
+    MSEG = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[1, :, :] - day[1, :, :])**2)
+    #print(MSEG)
+    MSEB = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[2, :, :] - day[2, :, :])**2)
+    #print(MSEB)
+    
+    MSEOverall = (MSER + MSEG + MSEB) / 3
+    return MSEOverall
+
+#calculate the RGB MSE for just two images
+#used for 1 to 1 comparisons
 def nonList_RGB_MSE(output, day):
     MSER = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[0, :, :] - day[0, :, :])**2)
-    print(MSER)
+    #print(MSER)
     MSEG = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[1, :, :] - day[1, :, :])**2)
-    print(MSEG)
+    #print(MSEG)
     MSEB = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[2, :, :] - day[2, :, :])**2)
-    print(MSEB)
+    #print(MSEB)
     
     MSEOverall = (MSER + MSEG + MSEB) / 3
     return MSEOverall
@@ -219,13 +251,15 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = UNet().to(device)
+    #change learning rate here
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    #criterion = RGB_MSE   # L1 works better than MSE for images
     
     #load the data
     trainTensor = TensorDataset(trainX, trainY)
+    #change batch size here
     trainLoader = DataLoader(trainTensor, batch_size = 2, shuffle = True)
     
+    #change epoch num here
     train(model, trainLoader, epochs = 100)
     
     dummy = show_results(model, testX[0], testY[0])

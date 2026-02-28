@@ -115,7 +115,11 @@ def loadImages():
     dayList = []
     
     for label in labels:
-        img = Image.open(folderPath + "/" + label[0]).convert("RGB")
+        try:
+            img = Image.open(folderPath + "/" + label[0]).convert("RGB")
+        except:
+            continue
+        
         img_np_array = np.array(img)
         print(img_np_array.shape)
         
