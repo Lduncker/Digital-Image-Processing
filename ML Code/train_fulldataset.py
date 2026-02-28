@@ -292,7 +292,19 @@ if __name__ == "__main__":
     #change epoch num here
     train(model, trainLoader, epochs = 100)
     
-    dummy = show_results(model, testX[0], testY[0])
+    #shuffle test set to show some results
+    shuffledIndices = np.random.permutation(testX.shape[0])
+    shuffleTestX = testX[shuffledIndices]
+    shuffleTestY = testY[shuffledIndices]
+    
+    print("Example 1 RGB_MSE: ", unregularized_RGB_MSE(shuffleTestX[0], shuffleTestY[0]))
+    dummy = show_results(model, shuffleTestX[0], shuffleTestY[0])
+    print("Example 2 RGB_MSE: ", unregularized_RGB_MSE(shuffleTestX[1], shuffleTestY[1]))
+    dummy = show_results(model, shuffleTestX[1], shuffleTestY[1])
+    print("Example 3 RGB_MSE: ", unregularized_RGB_MSE(shuffleTestX[2], shuffleTestY[2]))
+    dummy = show_results(model, shuffleTestX[2], shuffleTestY[2])
+    print("Example 4 RGB_MSE: ", unregularized_RGB_MSE(shuffleTestX[3], shuffleTestY[3]))
+    dummy = show_results(model, shuffleTestX[3], shuffleTestY[3])
     
     #Starting RGB_MSE
     originalImageTransformed = show_results(model, originalImageNight, originalImageDay)
