@@ -113,48 +113,74 @@ def show_results(model, night_img, day_img):
 #loads in all the images and assigns them to be day or night based on the timestamp they were taken
 def loadImages():
     folderPath = 'ML Code/training_data'
-    labelsPath = 'ML Code/labels/label.txt'
+    labelsPath = 'ML Code/labels'
     outputPath = 'ML Code/transformedFiles'
     
-    labels = np.loadtxt(labelsPath, dtype=str)
+    #set to the number of different photo locations in the database
+    #the max is 17, but that requires a LARGE amount of ram that my laptop doesnt have!
+    #so we will train on 8 for now
+    numLocations = 8
+
+    nightSet = []
+    daySet = []
     
-    nightList = []
-    dayList = []
-    
-    for label in labels:
-        try:
-            img = Image.open(folderPath + "/" + label[0]).convert("RGB")
-        except:
-            continue
-                
-        if img.size != (IM_WIDTH, IM_HEIGHT):
-            #if image size doesn't match resize using Lanczos
-            img = img.resize((IM_WIDTH, IM_HEIGHT), Image.Resampling.LANCZOS)
+    #go through each location, and make a set of data for that location
+    #this is done to ensure any image comparisons later on are kept by location, or else theres no actualy correlation in the training
+    for n in range(1, numLocations + 1):
         
-        img_np_array = np.array(img)
-        print(img_np_array.shape)
+        labels = np.loadtxt(labelsPath + "/l" + str(n) + ".txt", dtype=str)
         
-        imgName = outputPath + "/" + label[0][0:len(label[0])-4]
+        nightList = []
+        dayList = []
         
-        #assign a day/night label
-        #this isn't perfect as obv time zones vary stuff so some manual label tweaking is needed in label.txt for any outliers
-        if int(label[2]) < 7 or int(label[2]) > 17:
-            imgName += " Night"
-            nightList.append(img_np_array)
+        for label in labels:
+            try:
+                img = Image.open(folderPath + "/d" + str(n) + "/" + label[0]).convert("RGB")
+            except:
+                continue
+                    
+            if img.size != (IM_WIDTH, IM_HEIGHT):
+                #if image size doesn't match resize using Lanczos
+                img = img.resize((IM_WIDTH, IM_HEIGHT), Image.Resampling.LANCZOS)
+            
+            img_np_array = np.array(img)
+            #print(img_np_array.shape)
+            
+            imgName = outputPath + "/" + label[0][0:len(label[0])-4]
+            
+            #assign a day/night label
+            #this isn't perfect as obv time zones vary stuff so some manual label tweaking is needed in label.txt for any outliers
+            if int(label[2]) < 7 or int(label[2]) > 17:
+                imgName += " Night"
+                nightList.append(img_np_array)
+            else:
+                imgName += " Day"
+                dayList.append(img_np_array)
+            
+            #np.save(imgName, img_np_array)
+        
+        nightList = np.array(nightList, dtype=np.float32)
+        dayList = np.array(dayList, dtype=np.float32)
+        
+        print(nightList.shape)
+        print(dayList.shape)
+        
+        #trim both data sets to ensure theyre the same size
+        if nightList.shape[0] > dayList.shape[0]:
+            nightList = nightList[nightList.shape[0] - dayList.shape[0]:]
+        elif nightList.shape[0] < dayList.shape[0]:
+            dayList = dayList[dayList.shape[0] - nightList.shape[0]:]
+        
+        if n == 1:
+            nightSet = nightList
+            daySet = dayList
         else:
-            imgName += " Day"
-            dayList.append(img_np_array)
+            nightSet = np.append(nightSet, nightList, axis = 0)
+            daySet = np.append(daySet, dayList, axis = 0)
         
-        np.save(imgName, img_np_array)
-    
-    nightSet = np.array(nightList)
-    daySet = np.array(dayList)
-    
-    print(nightSet.shape)
-    print(daySet.shape)
-    
-    print(labels)
-    
+        print(nightSet.shape)
+        print(daySet.shape)
+        
     return nightSet, daySet
 
 #calculate the RGB_MSE for all images in a big list
@@ -169,8 +195,10 @@ def RGB_MSE(output, day):
     MSEOverall = (MSER + MSEG + MSEB) / 3
     return MSEOverall
 
+#calculate the RGB MSE for just two images
+#used for 1 to 1 comparisons
 #calculates the RGB MSE for two images with out the /255.0 regularization
-def unregularized_RGB_MSE(output, day):
+def nonList_RGB_MSE(output, day):
     MSER = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[0, :, :] - day[0, :, :])**2)
     #print(MSER)
     MSEG = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[1, :, :] - day[1, :, :])**2)
@@ -181,14 +209,15 @@ def unregularized_RGB_MSE(output, day):
     MSEOverall = (MSER + MSEG + MSEB) / 3
     return MSEOverall
 
-#calculate the RGB MSE for just two images
-#used for 1 to 1 comparisons
-def nonList_RGB_MSE(output, day):
-    MSER = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[0, :, :] - day[0, :, :])**2)
+#calculates the RGB MSE for two images with out the /255.0 regularization
+def unregularized_RGB_MSE(output, day):
+    outputTemp = output * 255
+    dayTemp = day * 255
+    MSER = (1/(outputTemp.shape[1] * outputTemp.shape[2])) * torch.sum((outputTemp[0, :, :] - dayTemp[0, :, :])**2)
     #print(MSER)
-    MSEG = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[1, :, :] - day[1, :, :])**2)
+    MSEG = (1/(outputTemp.shape[1] * outputTemp.shape[2])) * torch.sum((outputTemp[1, :, :] - dayTemp[1, :, :])**2)
     #print(MSEG)
-    MSEB = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[2, :, :] - day[2, :, :])**2)
+    MSEB = (1/(outputTemp.shape[1] * outputTemp.shape[2])) * torch.sum((outputTemp[2, :, :] - dayTemp[2, :, :])**2)
     #print(MSEB)
     
     MSEOverall = (MSER + MSEG + MSEB) / 3
@@ -210,13 +239,14 @@ if __name__ == "__main__":
     originalImageDay = torch.tensor(originalImageDay / 255.0, dtype=torch.float32).permute(2,0,1)
     
     #Starting RGB_MSE
-    print("Initial RGB_MSE: ", nonList_RGB_MSE(originalImageNight, originalImageDay))
+    print("Initial RGB_MSE: ", unregularized_RGB_MSE(originalImageNight, originalImageDay))
     
     #allow randomness
     #this variable can be changed to false if desired
     #if True: will randomly match day and night time images
     #if False: will cut off the excess night time images and match them according to input order
-    randomness = True
+    #NOTE: do not set to true with this program, due to using multiple locations data it does not work randomized
+    randomness = False
     
     if randomness:
         nightSet = nightSet[nightSet.shape[0] - daySet.shape[0]:]
@@ -225,7 +255,7 @@ if __name__ == "__main__":
         
         nightSet = nightSet[shuffledIndices]
     else:
-        nightSet = nightSet[nightSet.shape[0] - daySet.shape[0]]
+        nightSet = nightSet[nightSet.shape[0] - daySet.shape[0]:]
         pass
     
     #convert to tensors
@@ -266,4 +296,4 @@ if __name__ == "__main__":
     
     #Starting RGB_MSE
     originalImageTransformed = show_results(model, originalImageNight, originalImageDay)
-    print("Final RGB_MSE: ", nonList_RGB_MSE(originalImageTransformed, originalImageDay))
+    print("Final RGB_MSE: ", unregularized_RGB_MSE(originalImageTransformed, originalImageDay))

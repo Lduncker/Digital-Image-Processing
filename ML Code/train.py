@@ -106,7 +106,7 @@ def show_results(model, night_img, day_img):
 
 def loadImages():
     folderPath = 'ML Code/training_data_selective'
-    labelsPath = 'ML Code/labels/label.txt'
+    labelsPath = 'ML Code/labels/label_1.txt'
     outputPath = 'ML Code/transformedFiles_selective'
     
     labels = np.loadtxt(labelsPath, dtype=str)
@@ -121,7 +121,7 @@ def loadImages():
             continue
         
         img_np_array = np.array(img)
-        print(img_np_array.shape)
+        #print(img_np_array.shape)
         
         imgName = outputPath + "/" + label[0][0:len(label[0])-4]
         
@@ -132,7 +132,7 @@ def loadImages():
             imgName += " Day"
             dayList.append(img_np_array)
         
-        np.save(imgName, img_np_array)
+        #np.save(imgName, img_np_array)
     
     nightSet = np.array(nightList)
     daySet = np.array(dayList)
@@ -146,22 +146,36 @@ def loadImages():
 
 def RGB_MSE(output, day):
     MSER = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 0, :, :] - day[:, 0, :, :])**2)
-    print(MSER)
+    #print(MSER)
     MSEG = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 1, :, :] - day[:, 1, :, :])**2)
-    print(MSEG)
+    #print(MSEG)
     MSEB = (1/(output.shape[0] * output.shape[2] * output.shape[3])) * torch.sum((output[:, 2, :, :] - day[:, 2, :, :])**2)
-    print(MSEB)
+    #print(MSEB)
     
     MSEOverall = (MSER + MSEG + MSEB) / 3
     return MSEOverall
 
 def nonList_RGB_MSE(output, day):
     MSER = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[0, :, :] - day[0, :, :])**2)
-    print(MSER)
+    #print(MSER)
     MSEG = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[1, :, :] - day[1, :, :])**2)
-    print(MSEG)
+    #print(MSEG)
     MSEB = (1/(output.shape[1] * output.shape[2])) * torch.sum((output[2, :, :] - day[2, :, :])**2)
-    print(MSEB)
+    #print(MSEB)
+    
+    MSEOverall = (MSER + MSEG + MSEB) / 3
+    return MSEOverall
+
+#calculates the RGB MSE for two images with out the /255.0 regularization
+def unregularized_RGB_MSE(output, day):
+    outputTemp = output * 255
+    dayTemp = day * 255
+    MSER = (1/(outputTemp.shape[1] * outputTemp.shape[2])) * torch.sum((outputTemp[0, :, :] - dayTemp[0, :, :])**2)
+    #print(MSER)
+    MSEG = (1/(outputTemp.shape[1] * outputTemp.shape[2])) * torch.sum((outputTemp[1, :, :] - dayTemp[1, :, :])**2)
+    #print(MSEG)
+    MSEB = (1/(outputTemp.shape[1] * outputTemp.shape[2])) * torch.sum((outputTemp[2, :, :] - dayTemp[2, :, :])**2)
+    #print(MSEB)
     
     MSEOverall = (MSER + MSEG + MSEB) / 3
     return MSEOverall
@@ -182,7 +196,7 @@ if __name__ == "__main__":
     originalImageDay = torch.tensor(originalImageDay / 255.0, dtype=torch.float32).permute(2,0,1)
     
     #Starting RGB_MSE
-    print("Initial RGB_MSE: ", nonList_RGB_MSE(originalImageNight, originalImageDay))
+    print("Initial RGB_MSE: ", unregularized_RGB_MSE(originalImageNight, originalImageDay))
     
     #allow randomness
     #this variable can be changed to false if desired
@@ -236,4 +250,4 @@ if __name__ == "__main__":
     
     #Starting RGB_MSE
     originalImageTransformed = show_results(model, originalImageNight, originalImageDay)
-    print("Final RGB_MSE: ", nonList_RGB_MSE(originalImageTransformed, originalImageDay))
+    print("Final RGB_MSE: ", unregularized_RGB_MSE(originalImageTransformed, originalImageDay))
