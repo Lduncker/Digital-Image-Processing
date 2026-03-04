@@ -119,14 +119,20 @@ def loadImages():
     #set to the number of different photo locations in the database
     #the max is 17, but that requires a LARGE amount of ram that my laptop doesnt have!
     #so we will train on 8 for now
-    numLocations = 8
+    numLocations = 9
+    startLocation = 2
+    
+    #alternatively define a manual set of locations
+    #these were selected manually based on which locations appeared most similar to the original image
+    locations = [2, 3, 4, 5, 7, 11, 13, 14, 16]
 
     nightSet = []
     daySet = []
     
     #go through each location, and make a set of data for that location
     #this is done to ensure any image comparisons later on are kept by location, or else theres no actualy correlation in the training
-    for n in range(1, numLocations + 1):
+    #for n in range(startLocation, numLocations + 1):
+    for n in locations:
         
         labels = np.loadtxt(labelsPath + "/l" + str(n) + ".txt", dtype=str)
         
@@ -171,7 +177,8 @@ def loadImages():
         elif nightList.shape[0] < dayList.shape[0]:
             dayList = dayList[dayList.shape[0] - nightList.shape[0]:]
         
-        if n == 1:
+        #below line must be careful, can cause error if locations[0] doesn't match startLocation
+        if n == startLocation:
             nightSet = nightList
             daySet = dayList
         else:
