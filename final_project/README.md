@@ -3,3 +3,9 @@ detect if there is a license plate in a picture
 
 
 http://bdd-data.berkeley.edu/
+
+https://www.kaggle.com/datasets/mdfahimbinamin/100k-vehicle-dashcam-image-dataset
+
+EfficientDet-D2(768, single-scale) inference speed of 41.6 fps
+
+https://www.kaggle.com/datasets/solesensei/solesensei_bdd100k
