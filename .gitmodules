@@ -1,0 +1,3 @@
+[submodule "final_project/external/yolov5"]
+	path = final_project/external/yolov5
+	url = https://github.com/ultralytics/yolov5
