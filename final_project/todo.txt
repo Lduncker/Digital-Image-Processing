@@ -1,0 +1,3 @@
+1. Test that the model works on a video
+2. Adjust confidence to a level where it makes very few mistakes
+3. Train a second model to read the text on the license plate and display that live
