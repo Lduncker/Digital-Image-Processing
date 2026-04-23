@@ -161,48 +161,8 @@ can measure what the bare detector has learned.
 \section{Results}
 \label{sec:results}
 
-\begin{figure*}[t]
-  \centering
-  % Row 1: Successful detections
-  \begin{subfigure}[b]{0.31\textwidth}
-    \includegraphics[width=\linewidth]{output_0.png}
-    \caption{Police sedan, conf $=0.92$. Tight box on a standard rear plate under even lighting.}
-    \label{fig:out0}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.31\textwidth}
-    \includegraphics[width=\linewidth]{output_1.png}
-    \caption{Pickup in bright sunlight, conf $=0.91$. Clean detection despite direct glare.}
-    \label{fig:out4}
-  \end{subfigure}\hfill
-  \begin{subfigure}[b]{0.31\textwidth}
-    \includegraphics[width=\linewidth]{output_4.png}
-    \caption{Small shadowed plate near image boundary, conf $=0.90$. The stride-8 head recovers the plate.}
-    \label{fig:out1}
-  \end{subfigure}
-
-  \vspace{0.6em}
-
-  % Row 2: False positives (centered)
-  \begin{subfigure}[b]{0.31\textwidth}
-    \includegraphics[width=\linewidth]{output_2.png}
-    \caption{False positive on a hanging commercial sign, conf $=0.37$. Suppressed at threshold~$0.5$.}
-    \label{fig:out2}
-  \end{subfigure}\hspace{0.06\textwidth}%
-  \begin{subfigure}[b]{0.31\textwidth}
-    \includegraphics[width=\linewidth]{output_3.png}
-    \caption{False positive on a rectangular building facade, conf $=0.14$. Suppressed at threshold~$0.5$.}
-    \label{fig:out3}
-  \end{subfigure}
-
-  \caption{Detector output on five held-out validation images at
-  $\text{conf}\!\ge\!0.1$. \textbf{Top row}: all three true plates are
-  recovered at high confidence ($\ge\!0.90$) with tight bounding boxes across
-  varied conditions. \textbf{Bottom row}: both false positives fire on
-  high-contrast rectangular objects (signage, building windows) but at
-  low confidence ($0.14$--$0.37$); a deployment threshold of $0.5$
-  removes them while preserving every correct detection.}
-  \label{fig:qualitative}
-\end{figure*}
+Qualitative results on five held-out validation images are shown in
+\cref{fig:qualitative} (see \cref{sec:appendix}).
 
 \paragraph{True positives.}
 \Cref{fig:out0} shows a marked police sedan whose rear plate is cleanly
@@ -227,20 +187,6 @@ localizations intact.
 \subsection{Dashcam Video Evaluation}
 \label{sec:dashcam}
 
-We are currently running the retrained detector on frame-by-frame
-extracts from Lucian's dashcam footage. This test covers continuous,
-unscripted highway driving and exposes conditions absent from the
-static training set: motion blur, partial occlusion, rapid
-distance changes, and lens glare. Sample frames, per-condition
-detection rates, and temporal consistency analysis will be included
-in the next revision of this report.
-
-\begin{figure}[h]
-  \centering
-  \fbox{\rule{0pt}{3cm}\rule{0.9\columnwidth}{0pt}}
-  \caption{Dashcam video results --- to be included in next revision.}
-  \label{fig:dashcam}
-\end{figure}
 
 %-------------------------------------------------------------------------
 \subsection{Conclusion}
@@ -266,9 +212,63 @@ from the dashcam footage.
 
 %-------------------------------------------------------------------------
 \clearpage
+\raggedbottom
 {\small
 \bibliographystyle{ieeenat_fullname}
 \bibliography{main}
 }
+
+%-------------------------------------------------------------------------
+\clearpage
+\appendix
+\section{Qualitative Detection Results}
+\label{sec:appendix}
+
+\begin{figure*}[h]
+  \centering
+  % Row 1: high-confidence true positives (conf >= 0.90)
+  \hfill
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_0.png}
+    \caption{}
+    \label{fig:out0}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_1.png}
+    \caption{}
+    \label{fig:out4}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_4.png}
+    \caption{}
+    \label{fig:out1}
+  \end{subfigure}
+  \hfill
+
+  \vspace{0.3em}
+
+  % Row 2: low-confidence false positives (conf <= 0.37)
+  \hfill
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_2.png}
+    \caption{}
+    \label{fig:out2}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_3.png}
+    \caption{}
+    \label{fig:out3}
+  \end{subfigure}
+  \hfill
+
+  \caption{Detector output on five held-out validation images at
+  $\text{conf}\!\ge\!0.1$. \textbf{Top row}: all three true plates are
+  recovered at high confidence ($\ge\!0.90$) with tight bounding boxes across
+  varied conditions. \textbf{Bottom row}: both false positives fire on
+  high-contrast rectangular objects (signage, building windows) but at
+  low confidence ($0.14$--$0.37$); a deployment threshold of $0.5$
+  removes them while preserving every correct detection.}
+  \label{fig:qualitative}
+\end{figure*}
 
 \end{document}
