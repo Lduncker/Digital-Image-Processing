@@ -32,7 +32,7 @@ gEpochs = 20
 path = kagglehub.dataset_download("fareselmenshawii/license-plate-dataset")
 
 #shows the images versus their prediction
-def show_results(imgs, preds, examples, conf_thres=0.1, iou_thres=0.45):
+def show_results(imgs, preds, examples, conf_thres=0.18, iou_thres=0.45):
     imgs = imgs.cpu()
     
     #YOLOv5 returns (pred, train_out)
