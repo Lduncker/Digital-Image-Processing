@@ -14,6 +14,7 @@ from torch.optim import lr_scheduler
 import torch.backends.cudnn as cudnn
 from tempfile import TemporaryDirectory
 import os
+import random
 import time
 from pathlib import Path
 import cv2
@@ -32,7 +33,7 @@ gEpochs = 20
 path = kagglehub.dataset_download("fareselmenshawii/license-plate-dataset")
 
 #shows the images versus their prediction
-def show_results(imgs, preds, examples, conf_thres=0.18, iou_thres=0.45):
+def show_results(title, imgs, preds, examples, conf_thres=0.18, iou_thres=0.45):
     imgs = imgs.cpu()
     
     #YOLOv5 returns (pred, train_out)
@@ -86,8 +87,35 @@ def show_results(imgs, preds, examples, conf_thres=0.18, iou_thres=0.45):
         else:
             print("detections is none")
 
-        plt.savefig(f"output_{i}.png")
+        #path here
+        plt.savefig(f"outputFrames/{title}_output_{i}.png")
         plt.close()
+
+def recreateVideo(numVids, titles):
+    fps = 30
+    
+    imageFolder = Path('outputFrames/')
+    outFolder = Path('outputVideo/')
+    
+    for i in range(numVids):
+        videoName = titles[i] + ".mp4"
+        
+        #get all the frames
+        images = sorted([img for img in os.listdir(imageFolder) if img.find(titles[i]) != -1])
+        frame = cv2.imread(os.path.join(imageFolder, images[0]))
+        height, width, layers = frame.shape
+        
+        #setup video writer
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        video = cv2.VideoWriter(videoName, fourcc, fps, (width, height))
+        
+        for image in images:
+            video.write(cv2.imread(os.path.join(imageFolder, image)))
+        
+        video.release()
+        cv2.destroyAllWindows()
+        
+    
 
 def collate_fn(batch):
     images = []
@@ -129,7 +157,7 @@ if __name__ == "__main__":
     #load frames
     sampleRate = 1
     
-    videoPath = Path('videos/')
+    videoPath = Path('dashcam_videos/')
     videoSet = []
     videos = os.listdir(videoPath)
     
@@ -157,18 +185,34 @@ if __name__ == "__main__":
             arr = np.stack(frames)
             videoSet.append(arr)
     
-    videoTensor = [torch.tensor(v) for v in videoSet]
+    #videoTensor = [torch.tensor(v) for v in videoSet]
+    
+    titles = []
     
     with torch.inference_mode():
-        for video in videoTensor:
-            frames = video[:]
-            for frame in frames:
-                frame = frame.to(device)
+        for video in videoSet:
+            #generate a random number for labeling video frames
+            randTitleNum = random.randint(0, 10000)
+            titles.append(str(randTitleNum))
+            batch = []
+            batchSize = 16
+            frameCounter = 0
+            
+            for frame in video:
+                frameCounter += 1
                 
-                preds = model(frame)
+                if frameCounter % batchSize == 0:
+                    batch = torch.stack(batch).to(device)
+                    preds = model(batch)
+                    
+                    show_results(str(randTitleNum) + str(frameCounter), batch, preds, batchSize)   
+                    batch = []
                 
-                show_results(frame, preds, 1)
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = torch.tensor(frame).permute(2, 0, 1).float() / 255.0 #HWC -> CHW
                 
-                break
+                batch.append(frame) 
     
+    
+    recreateVideo(5, titles)
     
