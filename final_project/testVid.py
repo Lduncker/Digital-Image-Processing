@@ -1,218 +1,152 @@
-import kagglehub
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from PIL import Image
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader, Dataset
-from torchvision import datasets, models
-from torchvision.transforms import ToTensor
-import torchvision.io as io
-import torchvision.transforms as transforms
-from torch.optim import lr_scheduler
-import torch.backends.cudnn as cudnn
-from tempfile import TemporaryDirectory
 import os
-import random
-import time
-from pathlib import Path
 import cv2
+from pathlib import Path
 import sys
+
 repo_path = Path(__file__).parent / "external/yolov5"
 sys.path.insert(0, str(repo_path.resolve()))
-from utils.loss import ComputeLoss
 from utils.general import non_max_suppression
 from models.yolo import Model
 
 IM_WIDTH = 640
 IM_HEIGHT = 640
-batchSize = 32
-gEpochs = 20
+BATCH_SIZE = 16
+CONF_THRES = 0.18
+IOU_THRES = 0.45
 
-path = kagglehub.dataset_download("fareselmenshawii/license-plate-dataset")
 
-#shows the images versus their prediction
-def show_results(title, imgs, preds, examples, conf_thres=0.18, iou_thres=0.45):
-    imgs = imgs.cpu()
-    
-    #YOLOv5 returns (pred, train_out)
-    preds = preds[0] if isinstance(preds, tuple) else preds
-    preds = preds.cpu()
-    
-    print("Raw preds shape:", preds.shape)
-    print("Max conf:", preds[..., 4].max().item())
-    print("Mean conf:", preds[..., 4].mean().item())
-    
-    preds = non_max_suppression(preds, conf_thres=conf_thres, iou_thres=iou_thres)
+def run_inference_on_video(model, video_path, video_idx, device, out_dir):
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        print(f"  Cannot open {video_path}")
+        return
 
-    imgs_np = imgs.numpy()
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    print(f"  {total} frames @ {fps:.1f} fps")
 
-    for i in range(min(examples, len(imgs_np))):
-        print("Displaying image: ", i)
-        img = imgs_np[i].transpose(1, 2, 0).copy()  # CHW → HWC
+    out_path = str(out_dir / f'dashcam_{video_idx}.mp4')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = None
 
-        plt.figure(figsize=(6, 6))
-        plt.imshow(img)
-        plt.title(f"Prediction {i}")
-        plt.axis("off")
+    best_conf = -1.0
+    best_frame_data = None  # (rgb float32, detections)
 
-        detections = preds[i]
+    batch_tensors = []
+    batch_bgr = []
+    total_written = 0
 
-        if detections is not None and len(detections) > 0:
-            for det in detections:
-                x1, y1, x2, y2, conf, cls = det.cpu().numpy()
+    def flush_batch():
+        nonlocal writer, best_conf, best_frame_data, total_written
+        if not batch_tensors:
+            return
 
+        tensor_batch = torch.stack(batch_tensors).to(device)
+        with torch.inference_mode():
+            raw = model(tensor_batch)
+        preds = raw[0] if isinstance(raw, tuple) else raw
+        detections = non_max_suppression(preds.cpu(), conf_thres=CONF_THRES, iou_thres=IOU_THRES)
+
+        for bgr, det in zip(batch_bgr, detections):
+            annotated = bgr.copy()
+            max_conf = 0.0
+            if det is not None and len(det) > 0:
+                for d in det:
+                    x1, y1, x2, y2, conf, cls = d.cpu().numpy()
+                    x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+                    conf = float(conf)
+                    max_conf = max(max_conf, conf)
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    cv2.putText(annotated, f"{conf:.2f}", (x1, max(y1 - 5, 10)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+            if max_conf > best_conf:
+                best_conf = max_conf
+                rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+                best_frame_data = (rgb, det)
+
+            if writer is None:
+                h, w = annotated.shape[:2]
+                writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+            writer.write(annotated)
+            total_written += 1
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        resized = cv2.resize(frame, (IM_WIDTH, IM_HEIGHT))
+        batch_bgr.append(resized)
+        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        tensor = torch.tensor(rgb).permute(2, 0, 1).float() / 255.0
+        batch_tensors.append(tensor)
+
+        if len(batch_tensors) == BATCH_SIZE:
+            flush_batch()
+            batch_tensors = []
+            batch_bgr = []
+
+    flush_batch()
+    cap.release()
+    if writer:
+        writer.release()
+
+    print(f"  Written {total_written} annotated frames -> {out_path}")
+
+    # Save best-detection frame as a report figure
+    if best_frame_data is not None:
+        img, det = best_frame_data
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.imshow(img)
+        ax.axis('off')
+        if det is not None and len(det) > 0:
+            for d in det:
+                x1, y1, x2, y2, conf, cls = d.cpu().numpy()
                 x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
-
-                plt.gca().add_patch(
-                    plt.Rectangle(
-                        (x1, y1),
-                        x2 - x1,
-                        y2 - y1,
-                        fill=False,
-                        color="red",
-                        linewidth=2
-                    )
-                )
-
-                plt.text(
-                    x1,
-                    y1 - 5,
-                    f"{conf:.2f}",
-                    color="red",
-                    fontsize=8,
-                    backgroundcolor="white"
-                )
-        else:
-            print("detections is none")
-
-        #path here
-        plt.savefig(f"outputFrames/{title}_output_{i}.png")
-        plt.close()
-
-def recreateVideo(numVids, titles):
-    fps = 30
-    
-    imageFolder = Path('outputFrames/')
-    outFolder = Path('outputVideo/')
-    
-    for i in range(numVids):
-        videoName = titles[i] + ".mp4"
-        
-        #get all the frames
-        images = sorted([img for img in os.listdir(imageFolder) if img.find(titles[i]) != -1])
-        frame = cv2.imread(os.path.join(imageFolder, images[0]))
-        height, width, layers = frame.shape
-        
-        #setup video writer
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(videoName, fourcc, fps, (width, height))
-        
-        for image in images:
-            video.write(cv2.imread(os.path.join(imageFolder, image)))
-        
-        video.release()
-        cv2.destroyAllWindows()
-        
-    
-
-def collate_fn(batch):
-    images = []
-    targets = []
-
-    for i, (img, boxes) in enumerate(batch):
-        images.append(img)
-
-        if boxes.numel() > 0:
-            img_idx = torch.full((boxes.shape[0], 1), i)
-            boxes = torch.cat([img_idx, boxes], dim=1)  # [N, 6]
-            targets.append(boxes)
-
-    images = torch.stack(images, dim=0)
-
-    if len(targets) > 0:
-        targets = torch.cat(targets, dim=0)
+                ax.add_patch(plt.Rectangle((x1, y1), x2 - x1, y2 - y1,
+                                           fill=False, color='red', linewidth=2))
+                ax.text(x1, y1 - 5, f"{conf:.2f}", color='red', fontsize=8,
+                        backgroundcolor='white')
+        out_fig = out_dir / f"dashcam_{video_idx}.png"
+        fig.savefig(out_fig, bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
+        print(f"  Report figure: {out_fig}  (best conf={best_conf:.2f})")
     else:
-        targets = torch.zeros((0, 6))
+        print(f"  No detections in {video_path.name}")
 
-    return images, targets
 
 if __name__ == "__main__":
-    #setup model
+    script_dir = Path(__file__).parent
+    os.makedirs(script_dir / 'outputVideo', exist_ok=True)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+    print(f"Device: {device}")
+
     model = Model(
-        cfg="external/yolov5/models/yolov5s.yaml",
+        cfg=str(script_dir / "external/yolov5/models/yolov5s.yaml"),
         ch=3,
         nc=1
     ).to(device)
-    
-    #load the retrained weights
-    weights = torch.load("yolov5_retrained.pt", map_location=device, weights_only=False)
+
+    weights = torch.load(script_dir / "yolov5_retrained.pt", map_location=device, weights_only=False)
     model.load_state_dict(weights)
-    
     model.eval()
-    
-    #load frames
-    sampleRate = 1
-    
-    videoPath = Path('dashcam_videos/')
-    videoSet = []
-    videos = os.listdir(videoPath)
-    
-    #for each video
-    for v in videos:
-        vPath = os.path.join(videoPath, v)
-        cap = cv2.VideoCapture(vPath)
-        
-        #go through each frame and add them to a list
-        frames = []
-        frameCounter = 0
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            if frameCounter % sampleRate == 0:
-                frame = cv2.resize(frame, (IM_WIDTH, IM_HEIGHT))
-                frames.append(frame)
-            frameCounter += 1
-        
-        cap.release()
-        
-        #stack all the frames into one numpy array then add them to the set
-        if frames:
-            arr = np.stack(frames)
-            videoSet.append(arr)
-    
-    #videoTensor = [torch.tensor(v) for v in videoSet]
-    
-    titles = []
-    
-    with torch.inference_mode():
-        for video in videoSet:
-            #generate a random number for labeling video frames
-            randTitleNum = random.randint(0, 10000)
-            titles.append(str(randTitleNum))
-            batch = []
-            batchSize = 16
-            frameCounter = 0
-            
-            for frame in video:
-                frameCounter += 1
-                
-                if frameCounter % batchSize == 0:
-                    batch = torch.stack(batch).to(device)
-                    preds = model(batch)
-                    
-                    show_results(str(randTitleNum) + str(frameCounter), batch, preds, batchSize)   
-                    batch = []
-                
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = torch.tensor(frame).permute(2, 0, 1).float() / 255.0 #HWC -> CHW
-                
-                batch.append(frame) 
-    
-    
-    recreateVideo(5, titles)
-    
+
+    video_dir = script_dir / 'dashcam_videos'
+    videos = sorted(v for v in os.listdir(video_dir) if not v.startswith('.'))
+    print(f"Found {len(videos)} dashcam videos\n")
+
+    out_dir = script_dir / 'outputVideo'
+    for idx, vfile in enumerate(videos):
+        print(f"[{idx + 1}/{len(videos)}] {vfile}")
+        run_inference_on_video(model, video_dir / Path(vfile), idx, device, out_dir)
+
+    print("\nAll done.")
+    print(f"Annotated videos : {out_dir}/dashcam_0.mp4 ... dashcam_{len(videos) - 1}.mp4")
+    print(f"Report figures   : {out_dir}/dashcam_0.png ... dashcam_{len(videos) - 1}.png")
