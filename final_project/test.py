@@ -85,10 +85,9 @@ def show_results(imgs, preds, examples, conf_thres=0.1, iou_thres=0.45):
         print("Displaying image: ", i)
         img = imgs_np[i].transpose(1, 2, 0).copy()  # CHW → HWC
 
-        plt.figure(figsize=(6, 6))
-        plt.imshow(img)
-        plt.title(f"Prediction {i}")
-        plt.axis("off")
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.imshow(img)
+        ax.axis("off")
 
         detections = preds[i]
 
@@ -98,7 +97,7 @@ def show_results(imgs, preds, examples, conf_thres=0.1, iou_thres=0.45):
 
                 x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
 
-                plt.gca().add_patch(
+                ax.add_patch(
                     plt.Rectangle(
                         (x1, y1),
                         x2 - x1,
@@ -109,7 +108,7 @@ def show_results(imgs, preds, examples, conf_thres=0.1, iou_thres=0.45):
                     )
                 )
 
-                plt.text(
+                ax.text(
                     x1,
                     y1 - 5,
                     f"{conf:.2f}",
@@ -120,8 +119,8 @@ def show_results(imgs, preds, examples, conf_thres=0.1, iou_thres=0.45):
         else:
             print("detections is none")
 
-        plt.savefig(f"output_{i}.png")
-        plt.close()
+        fig.savefig(f"output_{i}.png", bbox_inches="tight", pad_inches=0)
+        plt.close(fig)
 
 def collate_fn(batch):
     images = []
@@ -146,8 +145,8 @@ def collate_fn(batch):
 
 if __name__ == "__main__":
     valDataset = ImageDataset(
-        imageFolder = path + "\\images\\val",
-        labelFolder = path + "\\labels\\val",
+        imageFolder = os.path.join(path, "images", "val"),
+        labelFolder = os.path.join(path, "labels", "val"),
         im_width = IM_WIDTH,
         im_height = IM_HEIGHT
     )
@@ -164,13 +163,13 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model = Model(
-        cfg="external/yolov5/models/yolov5s.yaml",
+        cfg=str((Path(__file__).parent / "external/yolov5/models/yolov5s.yaml").resolve()),
         ch=3,
         nc=1
     ).to(device)
     
     #load the retrained weights
-    weights = torch.load("yolov5_retrained.pt", map_location=device, weights_only=False)
+    weights = torch.load(str((Path(__file__).parent / "yolov5_retrained.pt").resolve()), map_location=device, weights_only=False)
     model.load_state_dict(weights)
     
     model.eval()

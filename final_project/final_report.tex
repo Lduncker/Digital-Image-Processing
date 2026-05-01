@@ -79,86 +79,49 @@ learning performs without plate-specific inductive bias.
 We use the Kaggle fareselmenshawii/license-plate-dataset,
 which ships in the standard YOLO layout: an
 images/\{train,val\} directory tree paired with a
-labels/\{train,val\} tree of per-image text files. Each label
-file contains one row per plate with the YOLO-normalized tuple
-$(c, x, y, w, h)$, where $c=0$ is the single plate class, $(x, y)$ is
-the box center, and $(w, h)$ is the box size, all expressed as
-fractions of image width and height. The dataset is downloaded at
-runtime with the kagglehub client.
-
-Each image is loaded with Pillow, resized to $640\!\times\!640$,
-converted to a float tensor in $[0,1]$, and permuted from HWC to CHW
-before being stacked into a mini-batch. Labels are concatenated across
-the batch with a leading image-index column into the six-column
-$(i, c, x, y, w, h)$ layout that YOLOv5's loss expects.
+labels/\{train,val\} tree. Each label file contains one row per plate
+with the YOLO-normalized tuple $(c, x, y, w, h)$, where $c=0$ is the
+single plate class and all coordinates are image-relative fractions.
 
 \subsection{Model}
 \label{sec:model}
-YOLOv5s consists of a CSPDarknet backbone, a PANet neck, and three
-detection heads. The backbone interleaves convolutional blocks with
-cross-stage partial (CSP) connections to reduce redundant gradient
-paths. The neck propagates features top-down and bottom-up so that
-each head sees both semantically rich and spatially precise
-representations. The three heads produce anchor-based predictions at
-strides 8, 16, and 32; the stride-8 head does most of the work for
-small plates.
-
-We instantiate the model from \texttt{models/yolov5s.yaml} with
-\texttt{nc=1} and load the official \texttt{yolov5s.pt} COCO
-checkpoint. Because the final $1\!\times\!1$ convolutions of the three
-heads have incompatible shapes between the 80-class source and the
-1-class target, we filter the pretrained state dict to retain only keys
-whose shape matches the new model. This means the backbone and neck are
-warm-started from COCO features while the detection heads train from
-scratch on plates --- a simple and effective form of partial transfer
-learning.
+We instantiate YOLOv5s with $\text{nc}=1$ and load the official COCO
+checkpoint, filtering the pretrained state dict to retain only
+shape-compatible keys so the backbone and neck are warm-started while
+the three detection heads train from scratch.
 
 \subsection{Loss}
 \label{sec:loss}
-We use YOLOv5's \texttt{ComputeLoss}:
+We use YOLOv5's ComputeLoss:
 \[
   \mathcal{L} = \lambda_{\text{box}}\mathcal{L}_{\text{box}} +
   \lambda_{\text{obj}}\mathcal{L}_{\text{obj}} +
   \lambda_{\text{cls}}\mathcal{L}_{\text{cls}}
 \]
-The box term is CIoU~\cite{zheng2020ciou}, which augments plain IoU
-with a distance penalty between box centers and an aspect-ratio
-consistency term. The objectness and class terms are binary
-cross-entropy. In the single-class setting the class term is
-effectively inert, so training signal flows almost entirely through
-the objectness and box-regression channels.
+The box term is CIoU~\cite{zheng2020ciou}; objectness and class terms
+are binary cross-entropy.
 
 \subsection{Training}
 \label{sec:training}
-Training ran for 20 epochs with batch size 32 using the Adam optimizer
-at a constant learning rate of $1\!\times\!10^{-3}$ and
-$640\!\times\!640$ input resolution. Because YOLOv5s provides strong
-default hyperparameters, minimal tuning was required beyond these
-basic choices.
-
-The standard YOLOv5 augmentation schedule is kept: mosaic stitching
-(four images per sample), horizontal flip with probability 0.5,
-HSV jitter (hue 0.015, saturation 0.7, value 0.4), random scale
-$\pm0.5$, and random translation $\pm0.1$. Vertical flip, shear,
-rotation, and perspective warping are disabled to respect the canonical
-up-orientation of license plates.
+We train for 20 epochs (batch size 32, Adam, lr $1\!\times\!10^{-3}$,
+$640\!\times\!640$ input) with the default YOLOv5 augmentation schedule:
+mosaic stitching, horizontal flip ($p=0.5$), and HSV jitter.
 
 \subsection{Inference}
 \label{sec:inference}
 At test time we apply non-maximum suppression with confidence threshold
-$0.1$ and IoU threshold $0.45$. The deliberately low confidence
-threshold exposes the raw detector output including its weakest
-candidate boxes. Each surviving detection is drawn as a bounding box
-annotated with its confidence score. No additional post-processing is
-applied --- no aspect-ratio filter, no minimum-area filter --- so we
-can measure what the bare detector has learned.
+$0.1$ and IoU threshold $0.45$.
 
 %-------------------------------------------------------------------------
 \section{Results}
 \label{sec:results}
 
+Box and objectness losses decreased steadily across 20 epochs; the
+class loss remained near zero throughout, confirming that the
+single-class task provides no gradient through that channel.
+
 Qualitative results on five held-out validation images are shown in
-\cref{fig:qualitative} (see \cref{sec:appendix}).
+\cref{fig:qualitative}.
 
 \paragraph{True positives.}
 \Cref{fig:out0} shows a marked police sedan whose rear plate is cleanly
@@ -178,6 +141,53 @@ intuitive failure modes, and crucially both have confidences well below
 any true detection ($0.37$ and $0.14$ respectively). A confidence
 threshold of $0.5$ removes both while leaving all three correct
 localizations intact.
+
+\begin{figure*}[h]
+  \centering
+  % Row 1: high-confidence true positives (conf >= 0.90)
+  \hfill
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_0.png}
+    \caption{}
+    \label{fig:out0}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_1.png}
+    \caption{}
+    \label{fig:out4}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_4.png}
+    \caption{}
+    \label{fig:out1}
+  \end{subfigure}
+  \hfill
+
+  \vspace{0.3em}
+
+  % Row 2: low-confidence false positives (conf <= 0.37)
+  \hfill
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_2.png}
+    \caption{}
+    \label{fig:out2}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{output_3.png}
+    \caption{}
+    \label{fig:out3}
+  \end{subfigure}
+  \hfill
+
+  \caption{Detector output on five held-out validation images at
+  $\text{conf}\!\ge\!0.1$. \textbf{Top row}: all three true plates are
+  recovered at high confidence ($\ge\!0.90$) with tight bounding boxes across
+  varied conditions. \textbf{Bottom row}: both false positives fire on
+  high-contrast rectangular objects (signage, building windows) but at
+  low confidence ($0.14$--$0.37$); a deployment threshold of $0.5$
+  removes them while preserving every correct detection.}
+  \label{fig:qualitative}
+\end{figure*}
 
 %-------------------------------------------------------------------------
 \subsection{Dashcam Video Evaluation}
@@ -200,23 +210,23 @@ rectangular tail-light clusters, which share the compact bright-on-dark
 texture of a license plate; these generally score below $0.40$ and
 are cleanly suppressed by a threshold of $0.5$.
 Annotated output videos for all five clips are saved to
-\texttt{outputVideo/dashcam\_\{0--4\}.mp4}.
+outputVideo/dashcam\_\{0--4\}.mp4.
 
 \begin{figure*}[h]
   \centering
   \hfill
   \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{dashcam_0.png}
+    \includegraphics[width=\linewidth]{outputVideo/dashcam_0.png}
     \caption{Daytime (morning)}
     \label{fig:dash0}
   \end{subfigure}%
   \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{dashcam_1.png}
+    \includegraphics[width=\linewidth]{outputVideo/dashcam_1.png}
     \caption{Daytime (morning)}
     \label{fig:dash1}
   \end{subfigure}%
   \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{dashcam_2.png}
+    \includegraphics[width=\linewidth]{outputVideo/dashcam_2.png}
     \caption{Evening}
     \label{fig:dash2}
   \end{subfigure}
@@ -226,23 +236,43 @@ Annotated output videos for all five clips are saved to
 
   \hfill
   \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{dashcam_3.png}
+    \includegraphics[width=\linewidth]{outputVideo/dashcam_3.png}
     \caption{Night}
     \label{fig:dash3}
   \end{subfigure}%
   \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{dashcam_4.png}
+    \includegraphics[width=\linewidth]{outputVideo/dashcam_4.png}
     \caption{Night}
     \label{fig:dash4}
   \end{subfigure}
   \hfill
-
-  \caption{Best-confidence detection frame from each of the five dashcam
-  clips (confidence $\ge 0.18$).  Daytime clips yield tight, high-confidence
-  boxes; night clips show degraded recall and occasional false positives on
-  retroreflective signs.}
+  \caption{Detector output on five dashcam clips from real highway
+  driving. \textbf{Top row}: two daytime-morning clips and one evening
+  clip. \textbf{Bottom row}: two night clips. Daytime detections are
+  confident ($\ge\!0.70$); at night recall drops and false positives
+  cluster on retroreflective signs and tail-light clusters (suppressed
+  by a threshold of $0.5$).}
   \label{fig:dashcam}
 \end{figure*}
+
+Comparing \cref{fig:qualitative} and \cref{fig:dashcam} highlights the gap
+between the two evaluation settings. On held-out dataset images the detector
+performs reliably: true plates are recovered at high confidence
+($\ge\!0.90$) with tight localization, and the few false positives are
+low-confidence outliers easily removed by a threshold increase. Performance
+on the dashcam footage is more variable and reveals a domain shift between
+the training distribution and real driving conditions. Several factors likely
+contribute. First, the dashcam captures frames at a fixed native aspect ratio
+that differs from the square $640\!\times\!640$ tiles used during training,
+so plates are reshaped slightly after resizing. Second, dashcam footage---especially
+the evening and night clips---is considerably darker and more specular than
+the uniformly lit dataset images; narrow illumination from headlights and
+streetlights creates high-contrast patches that confuse the objectness head.
+Third, motion blur from continuous highway driving smears plate characters
+and reduces local contrast compared to the static, high-quality photographs
+in the training set. Bridging this gap would likely require fine-tuning on a
+small set of annotated dashcam frames or augmenting training with synthetic
+low-light and motion-blurred samples.
 
 %-------------------------------------------------------------------------
 \subsection{Conclusion}
