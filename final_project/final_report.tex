@@ -17,7 +17,7 @@
 
 %-------------------------------------------------------------------------
 \begin{abstract}
-We study automatic license plate localization in road-scene images.
+We study automatic license plate detection in road-scene images.
 The task is straightforward to state: given an image, detect whether a
 license plate is present, and if so, draw a bounding box around it.
 We achieve this by fine-tuning YOLOv5s~\cite{jocher2020yolov5},
@@ -42,11 +42,7 @@ sufficient for a practical plate-detection pipeline.
 We were interested in building an automatic license plate detector
 motivated by a concrete goal: running the model on Lucian's dashcam
 footage to see how well a commodity detector handles real, unscripted
-highway driving. License plate detection is the first stage of any
-Automatic License Plate Recognition (ALPR) pipeline --- every
-downstream step (character segmentation, OCR, database lookup) depends
-on getting the bounding box right. We chose to tackle this stage first
-before extending to full recognition.
+highway driving.
 
 %-------------------------------------------------------------------------
 \section{Related Work}
@@ -80,15 +76,15 @@ learning performs without plate-specific inductive bias.
 
 \subsection{Dataset}
 \label{sec:data}
-We use the Kaggle \texttt{fareselmenshawii/license-plate-dataset},
+We use the Kaggle fareselmenshawii/license-plate-dataset,
 which ships in the standard YOLO layout: an
-\texttt{images/\{train,val\}} directory tree paired with a
-\texttt{labels/\{train,val\}} tree of per-image text files. Each label
+images/\{train,val\} directory tree paired with a
+labels/\{train,val\} tree of per-image text files. Each label
 file contains one row per plate with the YOLO-normalized tuple
 $(c, x, y, w, h)$, where $c=0$ is the single plate class, $(x, y)$ is
 the box center, and $(w, h)$ is the box size, all expressed as
 fractions of image width and height. The dataset is downloaded at
-runtime with the \texttt{kagglehub} client.
+runtime with the kagglehub client.
 
 Each image is loaded with Pillow, resized to $640\!\times\!640$,
 converted to a float tensor in $[0,1]$, and permuted from HWC to CHW
@@ -187,6 +183,66 @@ localizations intact.
 \subsection{Dashcam Video Evaluation}
 \label{sec:dashcam}
 
+We evaluated the trained detector on five dashcam clips recorded during
+real highway driving under varying conditions: two daytime morning clips,
+one evening clip, and two night clips (see \cref{fig:dashcam}).
+For each video every frame is extracted, resized to $640\!\times\!640$,
+and passed through the model with confidence threshold $0.18$ and
+IoU threshold $0.45$.
+
+The detector reliably fires on well-lit plates in the daytime clips,
+typically at confidence $\ge\!0.70$.
+At night the illumination is narrow and specular, which degrades
+recall: plates lit by oncoming headlights or distant streetlights are
+sometimes missed or detected only intermittently as they enter the
+bright zone. False positives cluster on retroreflective road signs and
+rectangular tail-light clusters, which share the compact bright-on-dark
+texture of a license plate; these generally score below $0.40$ and
+are cleanly suppressed by a threshold of $0.5$.
+Annotated output videos for all five clips are saved to
+\texttt{outputVideo/dashcam\_\{0--4\}.mp4}.
+
+\begin{figure*}[h]
+  \centering
+  \hfill
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{dashcam_0.png}
+    \caption{Daytime (morning)}
+    \label{fig:dash0}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{dashcam_1.png}
+    \caption{Daytime (morning)}
+    \label{fig:dash1}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{dashcam_2.png}
+    \caption{Evening}
+    \label{fig:dash2}
+  \end{subfigure}
+  \hfill
+
+  \vspace{0.3em}
+
+  \hfill
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{dashcam_3.png}
+    \caption{Night}
+    \label{fig:dash3}
+  \end{subfigure}%
+  \begin{subfigure}[b]{0.30\textwidth}
+    \includegraphics[width=\linewidth]{dashcam_4.png}
+    \caption{Night}
+    \label{fig:dash4}
+  \end{subfigure}
+  \hfill
+
+  \caption{Best-confidence detection frame from each of the five dashcam
+  clips (confidence $\ge 0.18$).  Daytime clips yield tight, high-confidence
+  boxes; night clips show degraded recall and occasional false positives on
+  retroreflective signs.}
+  \label{fig:dashcam}
+\end{figure*}
 
 %-------------------------------------------------------------------------
 \subsection{Conclusion}
