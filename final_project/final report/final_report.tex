@@ -158,9 +158,9 @@ Dataset images (a)--(e) demonstrate strong, high-confidence detections across va
 \subsection{Dashcam Video Evaluation}
 \label{sec:dashcam}
 
-We evaluated the trained detector on dashcam clips recorded during real highway driving. All detection results are shown in \cref{fig:all_results}.
+We evaluated the trained detector on dashcam clips recorded during real driving. All detection results are shown in \cref{fig:all_results}.
 
-While several dashcam frames produce reasonable detections, a clear domain gap exists between the controlled dataset images and unscripted highway footage. Two notable failure cases illustrate this gap: frame~(g) shows a false positive triggered by a highway guardrail, whose rectangular metallic structure resembles a license plate in shape and reflectance; frame~(h) shows a false positive on a brightly lit roadside sign, where high-intensity illumination causes the detector to misfire on the rectangular region.
+While several dashcam frames produce reasonable detections, a clear gap exists between the controlled dataset images and unscripted highway footage. Two notable failure cases illustrate this gap: frame~(g) shows a false positive triggered by a highway guardrail, whose rectangular metallic structure resembles a license plate in shape and reflectance; frame~(h) shows a false positive on a brightly lit roadside sign, where high-intensity illumination causes the detector to misfire on the rectangular region.
 
 These failures point to concrete remediation steps. First, raising the confidence threshold would suppress low-confidence false positives like those in (g) and (h) with minimal impact on true detections. Second, augmenting the training set with hard-negative examples --- guardrails, highway signs, and other rectangular roadside structures --- would teach the model to distinguish plate texture from confounding backgrounds. Third, adding brightness and glare augmentation during training would improve robustness to the high-contrast lighting conditions seen in dashcam footage.
 
