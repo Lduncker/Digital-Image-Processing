@@ -76,41 +76,18 @@ learning performs without plate-specific inductive bias.
 
 \subsection{Dataset}
 \label{sec:data}
-We use the Kaggle fareselmenshawii/license-plate-dataset,
-which ships in the standard YOLO layout: an
-images/\{train,val\} directory tree paired with a
-labels/\{train,val\} tree. Each label file contains one row per plate
-with the YOLO-normalized tuple $(c, x, y, w, h)$, where $c=0$ is the
-single plate class and all coordinates are image-relative fractions.
 
 \subsection{Model}
 \label{sec:model}
-We instantiate YOLOv5s with $\text{nc}=1$ and load the official COCO
-checkpoint, filtering the pretrained state dict to retain only
-shape-compatible keys so the backbone and neck are warm-started while
-the three detection heads train from scratch.
 
 \subsection{Loss}
 \label{sec:loss}
-We use YOLOv5's ComputeLoss:
-\[
-  \mathcal{L} = \lambda_{\text{box}}\mathcal{L}_{\text{box}} +
-  \lambda_{\text{obj}}\mathcal{L}_{\text{obj}} +
-  \lambda_{\text{cls}}\mathcal{L}_{\text{cls}}
-\]
-The box term is CIoU~\cite{zheng2020ciou}; objectness and class terms
-are binary cross-entropy.
 
 \subsection{Training}
 \label{sec:training}
-We train for 20 epochs (batch size 32, Adam, lr $1\!\times\!10^{-3}$,
-$640\!\times\!640$ input) with the default YOLOv5 augmentation schedule:
-mosaic stitching, horizontal flip ($p=0.5$), and HSV jitter.
 
 \subsection{Inference}
 \label{sec:inference}
-At test time we apply non-maximum suppression with confidence threshold
-$0.1$ and IoU threshold $0.45$.
 
 %-------------------------------------------------------------------------
 \section{Results}
@@ -123,156 +100,15 @@ single-class task provides no gradient through that channel.
 Qualitative results on five held-out validation images are shown in
 \cref{fig:qualitative}.
 
-\paragraph{True positives.}
-\Cref{fig:out0} shows a marked police sedan whose rear plate is cleanly
-boxed at $0.92$ confidence under even, shadowless lighting.
-\Cref{fig:out4} shows a pickup truck photographed in direct sunlight;
-the detector still fires at $0.91$ despite the bright glare washing out
-detail around the plate. \Cref{fig:out1} is the most demanding case: a
-small, shadowed plate positioned near the image boundary. The stride-8
-detection head, responsible for small objects, recovers it at $0.90$.
-
-\paragraph{False positives.}
-\Cref{fig:out2} shows a spurious detection on a hanging commercial
-sign: a compact, text-bearing rectangle, exactly the kind of texture
-the model is trained to fire on. \Cref{fig:out3} fires on a windowed
-building facade, another high-contrast rectangular grid. Both are
-intuitive failure modes, and crucially both have confidences well below
-any true detection ($0.37$ and $0.14$ respectively). A confidence
-threshold of $0.5$ removes both while leaving all three correct
-localizations intact.
-
-\begin{figure*}[h]
-  \centering
-  % Row 1: high-confidence true positives (conf >= 0.90)
-  \hfill
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{output_0.png}
-    \caption{}
-    \label{fig:out0}
-  \end{subfigure}%
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{output_1.png}
-    \caption{}
-    \label{fig:out4}
-  \end{subfigure}%
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{output_4.png}
-    \caption{}
-    \label{fig:out1}
-  \end{subfigure}
-  \hfill
-
-  \vspace{0.3em}
-
-  % Row 2: low-confidence false positives (conf <= 0.37)
-  \hfill
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{output_2.png}
-    \caption{}
-    \label{fig:out2}
-  \end{subfigure}%
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{output_3.png}
-    \caption{}
-    \label{fig:out3}
-  \end{subfigure}
-  \hfill
-
-  \caption{Detector output on five held-out validation images at
-  $\text{conf}\!\ge\!0.1$. \textbf{Top row}: all three true plates are
-  recovered at high confidence ($\ge\!0.90$) with tight bounding boxes across
-  varied conditions. \textbf{Bottom row}: both false positives fire on
-  high-contrast rectangular objects (signage, building windows) but at
-  low confidence ($0.14$--$0.37$); a deployment threshold of $0.5$
-  removes them while preserving every correct detection.}
-  \label{fig:qualitative}
-\end{figure*}
+The training data showed promising results with strong, confident detections. However, evaluation on real-world dashcam footage revealed performance gaps that could stem from several factors including image resolution, lighting conditions, and domain shift between the controlled dataset and unscripted highway driving.
 
 %-------------------------------------------------------------------------
 \subsection{Dashcam Video Evaluation}
 \label{sec:dashcam}
 
-We evaluated the trained detector on five dashcam clips recorded during
-real highway driving under varying conditions: two daytime morning clips,
-one evening clip, and two night clips (see \cref{fig:dashcam}).
-For each video every frame is extracted, resized to $640\!\times\!640$,
-and passed through the model with confidence threshold $0.18$ and
-IoU threshold $0.45$.
+We evaluated the trained detector on dashcam clips recorded during real highway driving. All detection results are shown in \cref{fig:all_results}.
 
-The detector reliably fires on well-lit plates in the daytime clips,
-typically at confidence $\ge\!0.70$.
-At night the illumination is narrow and specular, which degrades
-recall: plates lit by oncoming headlights or distant streetlights are
-sometimes missed or detected only intermittently as they enter the
-bright zone. False positives cluster on retroreflective road signs and
-rectangular tail-light clusters, which share the compact bright-on-dark
-texture of a license plate; these generally score below $0.40$ and
-are cleanly suppressed by a threshold of $0.5$.
-Annotated output videos for all five clips are saved to
-outputVideo/dashcam\_\{0--4\}.mp4.
 
-\begin{figure*}[h]
-  \centering
-  \hfill
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{outputVideo/dashcam_0.png}
-    \caption{Daytime (morning)}
-    \label{fig:dash0}
-  \end{subfigure}%
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{outputVideo/dashcam_1.png}
-    \caption{Daytime (morning)}
-    \label{fig:dash1}
-  \end{subfigure}%
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{outputVideo/dashcam_2.png}
-    \caption{Evening}
-    \label{fig:dash2}
-  \end{subfigure}
-  \hfill
-
-  \vspace{0.3em}
-
-  \hfill
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{outputVideo/dashcam_3.png}
-    \caption{Night}
-    \label{fig:dash3}
-  \end{subfigure}%
-  \begin{subfigure}[b]{0.30\textwidth}
-    \includegraphics[width=\linewidth]{outputVideo/dashcam_4.png}
-    \caption{Night}
-    \label{fig:dash4}
-  \end{subfigure}
-  \hfill
-  \caption{Detector output on five dashcam clips from real highway
-  driving. \textbf{Top row}: two daytime-morning clips and one evening
-  clip. \textbf{Bottom row}: two night clips. Daytime detections are
-  confident ($\ge\!0.70$); at night recall drops and false positives
-  cluster on retroreflective signs and tail-light clusters (suppressed
-  by a threshold of $0.5$).}
-  \label{fig:dashcam}
-\end{figure*}
-
-Comparing \cref{fig:qualitative} and \cref{fig:dashcam} highlights the gap
-between the two evaluation settings. On held-out dataset images the detector
-performs reliably: true plates are recovered at high confidence
-($\ge\!0.90$) with tight localization, and the few false positives are
-low-confidence outliers easily removed by a threshold increase. Performance
-on the dashcam footage is more variable and reveals a domain shift between
-the training distribution and real driving conditions. Several factors likely
-contribute. First, the dashcam captures frames at a fixed native aspect ratio
-that differs from the square $640\!\times\!640$ tiles used during training,
-so plates are reshaped slightly after resizing. Second, dashcam footage---especially
-the evening and night clips---is considerably darker and more specular than
-the uniformly lit dataset images; narrow illumination from headlights and
-streetlights creates high-contrast patches that confuse the objectness head.
-Third, motion blur from continuous highway driving smears plate characters
-and reduces local contrast compared to the static, high-quality photographs
-in the training set. Bridging this gap would likely require fine-tuning on a
-small set of annotated dashcam frames or augmenting training with synthetic
-low-light and motion-blurred samples.
 
 %-------------------------------------------------------------------------
 \subsection{Conclusion}
@@ -288,20 +124,74 @@ The main remaining failure mode is low-confidence false positives on
 rectangular signage, which a simple confidence-threshold increase
 eliminates in practice.
 
-\subsection{Future Work}
-\label{sec:future}
-The natural next step is to extend the pipeline from detection to full
-recognition: given a tightly cropped plate bounding box, apply OCR to
-extract the alphanumeric plate number. This would complete an end-to-end
-ALPR pipeline and allow evaluation against ground-truth plate strings
-from the dashcam footage.
+%-------------------------------------------------------------------------
+\clearpage
+\begin{figure*}[p]
+  \centering
+  \textbf{Dataset Images}
+  \\
+  \vspace{0.2em}
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../output_0.png}
+    \label{fig:out0}
+  \end{subfigure}\hspace{0.02\textwidth}%
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../output_1.png}
+    \label{fig:out4}
+  \end{subfigure}\hspace{0.02\textwidth}%
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../output_4.png}
+    \label{fig:out1}
+  \end{subfigure}\hspace{0.02\textwidth}%
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../output_2.png}
+    \label{fig:out2}
+  \end{subfigure}
+
+  \vspace{0.3em}
+
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../output_3.png}
+    \label{fig:out3}
+  \end{subfigure}
+
+  \vspace{0.8em}
+
+  \textbf{Dashcam Images}
+  \\
+  \vspace{0.2em}
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../outputVideo/dashcam_0.png}
+    \label{fig:dash0}
+  \end{subfigure}\hspace{0.02\textwidth}%
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../outputVideo/dashcam_1.png}
+    \label{fig:dash1}
+  \end{subfigure}\hspace{0.02\textwidth}%
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../outputVideo/dashcam_2.png}
+    \label{fig:dash2}
+  \end{subfigure}\hspace{0.02\textwidth}%
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../outputVideo/dashcam_3.png}
+    \label{fig:dash3}
+  \end{subfigure}
+
+  \vspace{0.3em}
+
+  \begin{subfigure}[b]{0.22\textwidth}
+    \includegraphics[width=\linewidth]{../outputVideo/dashcam_4.png}
+    \label{fig:dash4}
+  \end{subfigure}
+\end{figure*}
 
 %-------------------------------------------------------------------------
 \clearpage
-\raggedbottom
 {\small
 \bibliographystyle{ieeenat_fullname}
 \bibliography{main}
 }
+
+\raggedbottom
 
 \end{document}
