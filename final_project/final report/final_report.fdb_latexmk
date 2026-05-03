@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex final_report"] 1777822154.26009 "final_report.aux" "final_report.bbl" "final_report" 1777822232.46182 0
-  "./ieeenat_fullname.bst" 1777821983.5671 26900 a296cb1ebee73f7bfa143751dc4e1dfd ""
-  "./main.bib" 1777821983.56722 6099 af19212bdcb7c34e0c3a210ee2e97110 ""
-  "final_report.aux" 1777822232.26964 6536 70d0d5bada3a92f573e0af65d2df9030 "pdflatex"
+["bibtex final_report"] 1777823497.08659 "final_report.aux" "final_report.bbl" "final_report" 1777823498.05666 0
+  "./ieeenat_fullname.bst" 1777822604.12659 26900 a296cb1ebee73f7bfa143751dc4e1dfd ""
+  "./main.bib" 1777822604.12675 6099 af19212bdcb7c34e0c3a210ee2e97110 ""
+  "final_report.aux" 1777823497.86724 5541 2dbb31f0213844f98032984478916dcc "pdflatex"
   (generated)
   "final_report.bbl"
   "final_report.blg"
   (rewritten before read)
-["pdflatex"] 1777822231.49411 "/Users/lduncker/Digital-Image-Processing/final_project/final report/final_report.tex" "final_report.pdf" "final_report" 1777822232.46193 0
+["pdflatex"] 1777823497.17477 "/Users/lduncker/Digital-Image-Processing/final_project/final report/final_report.tex" "final_report.pdf" "final_report" 1777823498.05676 0
   "../outputVideo/dashcam_0.png" 1777570992.69516 349444 642738b510fc1144478b5197dddb1de9 ""
   "../outputVideo/dashcam_1.png" 1777571364.16778 332540 7a5ff97c4fdce7f6dc4ac8f7a3fc49fb ""
   "../outputVideo/dashcam_2.png" 1777571738.55314 255234 23e7f8b39ac1932bfdf24caa4d814227 ""
@@ -18,7 +18,7 @@
   "../output_2.png" 1777570154.32147 347365 a7d6edc761440f0162c4822beb5204c2 ""
   "../output_3.png" 1777570154.3523 393804 b23195e8efd07b7b2428090bb882f201 ""
   "../output_4.png" 1777570154.38462 353557 97ddd07b741f4f46dc746587f0becb55 ""
-  "/Users/lduncker/Digital-Image-Processing/final_project/final report/final_report.tex" 1777822231.37061 10106 6f2a87fcf366f9027831c59c04b7b087 ""
+  "/Users/lduncker/Digital-Image-Processing/final_project/final report/final_report.tex" 1777823495.99607 11285 79f02da293f219512412c1d229130b15 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/courier/pcrr7t.tfm" 1136768653 960 379cc0019370a9e0208a0a3f949f847a ""
@@ -53,7 +53,6 @@
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy6.tfm" 1136768653 1116 933a60c408fc0a863a92debe84b2d294 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy8.tfm" 1136768653 1120 8b7d695260f3cff42e636090a8002094 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy9.tfm" 1136768653 1116 25a7bf822c58caf309a702ef79f4afbb ""
-  "/usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb" 1248133631 36299 5f9df58c2139e7edcf37c8fca4bd384d ""
   "/usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/usr/local/texlive/2026/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb" 1136849748 45758 19968a0990191524e34e1994d4a31cb6 ""
@@ -138,12 +137,12 @@
   "/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1774375345 5541377 04880c840ca220163a28f1a3af0ee662 ""
   "/usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1772409757 3636768 9f94d239f422c02416e379a36a852ffd ""
   "/usr/local/texlive/2026/texmf.cnf" 1772409725 577 648cd9f92f9c0eac486f4c71c85cfbbe ""
-  "cvpr.sty" 1777821983.49285 21928 76d228f63bfb1f5397d70feff770bf86 ""
-  "final_report.aux" 1777822232.26964 6536 70d0d5bada3a92f573e0af65d2df9030 "pdflatex"
-  "final_report.bbl" 1777822154.34779 3753 f813d6010892084e3a4f37cd3cad8e3f "bibtex final_report"
-  "final_report.out" 1777822232.27039 1298 acbe82275851a700a7cccf9654234ae8 "pdflatex"
-  "final_report.tex" 1777822231.37061 10106 6f2a87fcf366f9027831c59c04b7b087 ""
-  "preamble.tex" 1777821983.56729 521 d17883364d0873d572f36c602021d8f2 ""
+  "cvpr.sty" 1777822604.10454 21928 76d228f63bfb1f5397d70feff770bf86 ""
+  "final_report.aux" 1777823497.86724 5541 2dbb31f0213844f98032984478916dcc "pdflatex"
+  "final_report.bbl" 1777823497.17274 3719 eb258f7dd81eb298e0053308ebd60c0a "bibtex final_report"
+  "final_report.out" 1777823497.86776 1298 acbe82275851a700a7cccf9654234ae8 "pdflatex"
+  "final_report.tex" 1777823495.99607 11285 79f02da293f219512412c1d229130b15 ""
+  "preamble.tex" 1777822604.12684 521 d17883364d0873d572f36c602021d8f2 ""
   (generated)
   "final_report.aux"
   "final_report.log"
