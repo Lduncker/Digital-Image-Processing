@@ -7,7 +7,7 @@
 
 \author{
   Lucian Duncker~{\tt\small (lduncker@wpi.edu)} \quad
-  Joshua Pasino~{\tt\small (jjpisano@wpi.edu)}\\[0.2em]
+  Joseph Pisano~{\tt\small (jjpisano@wpi.edu)}\\[0.2em]
   Worcester Polytechnic Institute\\[0.1em]
   {\small ECE/CS 545 --- Prof.\ Ziming Zhang}
 }
@@ -77,17 +77,67 @@ learning performs without plate-specific inductive bias.
 \subsection{Dataset}
 \label{sec:data}
 
+We use a Kaggle license-plate dataset containing 4,300 training images and
+1,000 validation images, each annotated in YOLO format with bounding boxes
+around every visible plate.
+The pre-existing labels were the primary reason for choosing this dataset:
+manual annotation would have been prohibitively time-consuming, and using a
+detection model to label an unannotated dataset would have introduced
+additional failure risk beyond the scope of this project.
+The labeled validation split also enables quantitative performance evaluation.
+
 \subsection{Model}
 \label{sec:model}
+
+Because the dataset uses YOLO-format labels we elected to fine-tune
+YOLOv5s~\cite{jocher2020yolov5}, the second-smallest model in the YOLOv5
+family, pretrained on MS-COCO.
+The small model size was chosen to support real-time inference at the typical
+dashcam frame rate of 30\,fps.
+For fine-tuning we replace the first layer to accept $640\!\times\!640$ input
+images and replace the detection head to output a single-class YOLO label with
+plate bounding boxes, training those modified layers while warm-starting the
+backbone from the COCO checkpoint.
 
 \subsection{Loss}
 \label{sec:loss}
 
+We use the \texttt{ComputeLoss} function provided by the YOLOv5 library, which
+combines binary cross-entropy on objectness and class scores with CIoU
+regression loss on box coordinates --- the same loss the pretrained model was
+optimized with.
+
 \subsection{Training}
 \label{sec:training}
 
+Training uses an Adam optimizer for 20 epochs with a batch size of 32.
+Few epochs are sufficient because we are fine-tuning rather than training from
+scratch.
+We retain the standard YOLOv5 hyperparameters but remove image augmentations
+that can cause label mismatches (e.g.\ shear, perspective warp).
+Because dashcam plates consistently appear in the lower portion of the frame
+we intentionally allow the model to learn this spatial prior rather than
+enforcing location invariance.
+
 \subsection{Inference}
 \label{sec:inference}
+
+At inference time we collect all detections above a confidence threshold of
+0.18, chosen empirically to suppress most false positives while retaining
+detections of small or distant plates.
+For video input, each frame is processed independently and a bounding box is
+drawn around every surviving detection.
+
+For each detection we also run an image-enhancement pipeline on the
+corresponding region of the original $1920\!\times\!1080$ frame: the crop is
+converted to grayscale, the lighting is normalized, contrast is enhanced,
+noise is reduced, the image is sharpened, and finally an adaptive threshold is
+applied to highlight edges.
+The enhanced crop is overlaid above the plate in the output video.
+This pipeline can produce a more human-readable plate image when sufficient
+detail is present, but motion blur from fast-moving vehicles often limits how
+much detail can be recovered.
+% TODO: add \cref{fig:enhancement} once enhancementHighlights1/2 images are placed in the project directory
 
 %-------------------------------------------------------------------------
 \section{Results}
