@@ -5,64 +5,81 @@
   \providecommand{\doi}[1]{doi: #1}\else
   \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
 
-\bibitem[Bochkovskiy et~al.(2020)Bochkovskiy, Wang, and Liao]{bochkovskiy2020yolov4}
+\bibitem[Bochkovskiy et~al.(2020)Bochkovskiy, Wang, and
+  Liao]{bochkovskiy2020yolov4}
 Alexey Bochkovskiy, Chien-Yao Wang, and Hong-Yuan~Mark Liao.
 \newblock Yolov4: Optimal speed and accuracy of object detection.
 \newblock \emph{arXiv preprint arXiv:2004.10934}, 2020.
 
-\bibitem[Carion et~al.(2020)Carion, Massa, Synnaeve, Usunier, Kirillov, and Zagoruyko]{carion2020detr}
-Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander Kirillov, and Sergey Zagoruyko.
+\bibitem[Carion et~al.(2020)Carion, Massa, Synnaeve, Usunier, Kirillov, and
+  Zagoruyko]{carion2020detr}
+Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander
+  Kirillov, and Sergey Zagoruyko.
 \newblock End-to-end object detection with transformers.
-\newblock In \emph{European Conference on Computer Vision (ECCV)}, pages 213--229, 2020.
+\newblock In \emph{European Conference on Computer Vision (ECCV)}, pages
+  213--229, 2020.
 
 \bibitem[Jocher(2020)]{jocher2020yolov5}
 Glenn Jocher.
 \newblock {YOLOv5} by {Ultralytics}.
 \newblock \url{https://github.com/ultralytics/yolov5}, 2020.
 
-\bibitem[Lin et~al.(2017)Lin, Goyal, Girshick, He, and Doll{\'a}r]{lin2017focal}
+\bibitem[Lin et~al.(2017)Lin, Goyal, Girshick, He, and
+  Doll{\'a}r]{lin2017focal}
 Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, and Piotr Doll{\'a}r.
 \newblock Focal loss for dense object detection.
-\newblock In \emph{Proceedings of the IEEE International Conference on Computer Vision (ICCV)}, pages 2980--2988, 2017.
+\newblock In \emph{Proceedings of the IEEE International Conference on Computer
+  Vision (ICCV)}, pages 2980--2988, 2017.
 
 \bibitem[Liu et~al.(2018)Liu, Qi, Qin, Shi, and Jia]{liu2018panet}
 Shu Liu, Lu Qi, Haifang Qin, Jianping Shi, and Jiaya Jia.
 \newblock Path aggregation network for instance segmentation.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 8759--8768, 2018.
+\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 8759--8768, 2018.
 
-\bibitem[Liu et~al.(2016)Liu, Anguelov, Erhan, Szegedy, Reed, Fu, and Berg]{liu2016ssd}
-Wei Liu, Dragomir Anguelov, Dumitru Erhan, Christian Szegedy, Scott Reed, Cheng-Yang Fu, and Alexander~C. Berg.
+\bibitem[Liu et~al.(2016)Liu, Anguelov, Erhan, Szegedy, Reed, Fu, and
+  Berg]{liu2016ssd}
+Wei Liu, Dragomir Anguelov, Dumitru Erhan, Christian Szegedy, Scott Reed,
+  Cheng-Yang Fu, and Alexander~C. Berg.
 \newblock {SSD}: Single shot multibox detector.
-\newblock In \emph{European Conference on Computer Vision (ECCV)}, pages 21--37, 2016.
+\newblock In \emph{European Conference on Computer Vision (ECCV)}, pages
+  21--37, 2016.
 
 \bibitem[Redmon and Farhadi(2017)]{redmon2017yolov2}
 Joseph Redmon and Ali Farhadi.
 \newblock {YOLO9000}: Better, faster, stronger.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 7263--7271, 2017.
+\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 7263--7271, 2017.
 
 \bibitem[Redmon and Farhadi(2018)]{redmon2018yolov3}
 Joseph Redmon and Ali Farhadi.
 \newblock Yolov3: An incremental improvement.
 \newblock \emph{arXiv preprint arXiv:1804.02767}, 2018.
 
-\bibitem[Redmon et~al.(2016)Redmon, Divvala, Girshick, and Farhadi]{redmon2016yolo}
+\bibitem[Redmon et~al.(2016)Redmon, Divvala, Girshick, and
+  Farhadi]{redmon2016yolo}
 Joseph Redmon, Santosh Divvala, Ross Girshick, and Ali Farhadi.
 \newblock You only look once: Unified, real-time object detection.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 779--788, 2016.
+\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 779--788, 2016.
 
 \bibitem[Ren et~al.(2015)Ren, He, Girshick, and Sun]{ren2015faster}
 Shaoqing Ren, Kaiming He, Ross Girshick, and Jian Sun.
-\newblock Faster {R-CNN}: Towards real-time object detection with region proposal networks.
-\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2015.
+\newblock Faster {R-CNN}: Towards real-time object detection with region
+  proposal networks.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2015.
 
 \bibitem[Silva and Jung(2018)]{silva2018wpodnet}
 S{\'e}rgio~Montazzolli Silva and Cl{\'a}udio~Rosito Jung.
 \newblock License plate detection and recognition in unconstrained scenarios.
-\newblock In \emph{European Conference on Computer Vision (ECCV)}, pages 580--596, 2018.
+\newblock In \emph{European Conference on Computer Vision (ECCV)}, pages
+  580--596, 2018.
 
 \bibitem[Tan et~al.(2020)Tan, Pang, and Le]{tan2020efficientdet}
 Mingxing Tan, Ruoming Pang, and Quoc~V. Le.
 \newblock Efficientdet: Scalable and efficient object detection.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 10781--10790, 2020.
+\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, pages 10781--10790, 2020.
 
 \end{thebibliography}
