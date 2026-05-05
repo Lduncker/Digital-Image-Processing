@@ -139,8 +139,7 @@ applied to highlight edges.
 The enhanced crop is overlaid above the plate in the output video.
 This pipeline can produce a more human-readable plate image when sufficient
 detail is present, but motion blur from fast-moving vehicles often limits how
-much detail can be recovered.
-% TODO: add \cref{fig:enhancement} once enhancementHighlights1/2 images are placed in the project directory
+much detail can be recovered (see \cref{fig:enhancement}).
 
 %-------------------------------------------------------------------------
 \section{Results}
@@ -165,6 +164,11 @@ While several dashcam frames produce reasonable detections, a clear domain gap e
 
 These failures point to concrete remediation steps. First, raising the confidence threshold would suppress low-confidence false positives like those in (g) and (h) with minimal impact on true detections. Second, augmenting the training set with hard-negative examples --- guardrails, highway signs, and other rectangular roadside structures --- would teach the model to distinguish plate texture from confounding backgrounds. Third, adding brightness and glare augmentation during training would improve robustness to the high-contrast lighting conditions seen in dashcam footage.
 
+\subsection{Enhancement Pipeline Results}
+\label{sec:enhancement}
+
+For each detected plate, the enhancement pipeline (grayscale conversion, lighting normalization, contrast enhancement, noise reduction, sharpening, and adaptive thresholding) is applied to the full-resolution crop from the original $1920\!\times\!1080$ frame. Representative outputs are shown in \cref{fig:enhancement}. When the plate is sufficiently stationary in the frame, the pipeline produces a noticeably crisper image that aids human readability. In high-speed captures, however, motion blur limits recoverable detail and the pipeline provides only modest improvement.
+
 
 
 %-------------------------------------------------------------------------
@@ -188,35 +192,42 @@ eliminates in practice.
   \begin{minipage}[t]{0.49\textwidth}
     \centering
     \textbf{Dataset Images}\\[0.4em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../output_0.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_0.png}\\[-0.1em]
     {\small (a)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../output_1.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_1.png}\\[-0.1em]
     {\small (b)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../output_4.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_4.png}\\[-0.1em]
     {\small (c)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../output_2.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_2.png}\\[-0.1em]
     {\small (d)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../output_3.png}\\[-0.1em]
-    {\small (e)}
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_3.png}\\[-0.1em]
+    {\small (e)}\\[0.4em]
+    \textbf{Enhancement Highlights}\\[0.4em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../enhancementHighlights1.png}\\[-0.1em]
+    {\small (k)}
   \end{minipage}%
   \hfill%
   \begin{minipage}[t]{0.49\textwidth}
     \centering
     \textbf{Dashcam Images}\\[0.4em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../outputVideo/dashcam_0.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_0.png}\\[-0.1em]
     {\small (f)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../outputVideo/dashcam_1.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_1.png}\\[-0.1em]
     {\small (g)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../outputVideo/dashcam_2.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_2.png}\\[-0.1em]
     {\small (h)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../outputVideo/dashcam_3.png}\\[-0.1em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_3.png}\\[-0.1em]
     {\small (i)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.17\textheight,keepaspectratio]{../outputVideo/dashcam_4.png}\\[-0.1em]
-    {\small (j)}
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_4.png}\\[-0.1em]
+    {\small (j)}\\[0.4em]
+    \phantom{\textbf{Enhancement Highlights}}\\[0.4em]
+    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../enhancementHighlights2.png}\\[-0.1em]
+    {\small (l)}
   \end{minipage}
-  \caption{Detection results. \textbf{Left}: five held-out validation images (a)--(e). \textbf{Right}: dashcam frames (f)--(j).}
+  \caption{All results. \textbf{Left}: dataset images (a)--(e) and enhancement highlight (k). \textbf{Right}: dashcam frames (f)--(j) and enhancement highlight (l).}
   \label{fig:qualitative}
   \label{fig:all_results}
+  \label{fig:enhancement}
 \end{figure*}
 
 %-------------------------------------------------------------------------
