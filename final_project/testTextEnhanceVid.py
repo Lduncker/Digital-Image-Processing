@@ -24,7 +24,6 @@ RESIZE_WIDTH = 120
 RESIZE_HEIGHT = 120
 target_height = 64
 
-
 def run_inference_on_video(model, video_path, video_idx, device, out_dir):
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
