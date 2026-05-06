@@ -1,7 +1,7 @@
 # License Plate Detection with YOLOv5
 
 Final project for Digital Image Processing (Worcester Polytechnic
-Institute). Authors: Lucian Duncker, Joshua Pasino.
+Institute). Authors: Lucian Duncker, Joseph Pasino.
 
 The goal is to detect license plates in road-scene images and draw a
 bounding box around each one. We fine-tune Ultralytics YOLOv5s (COCO
@@ -50,25 +50,6 @@ writes `output_{0..4}.png`):
 python test.py
 ```
 
-## Results
-
-Qualitative predictions on the validation split are saved as
-`output_0.png` through `output_4.png`. See the report for full
-discussion of the results.
-
-## Known issues
-
-- `train.py` and `test.py` currently build dataset paths with Windows
-  separators (`path + "\\images\\train"`). On macOS/Linux these need to
-  become `"/images/train"` (or, better, `os.path.join(path, "images",
-  "train")`). Fix at the two `ImageDataset(...)` construction sites in
-  each script before running outside Windows.
-- 20 epochs is short for YOLOv5; accuracy would improve with a longer
-  schedule (100 epochs, cosine LR, SGD + momentum 0.937), which is the
-  standard Ultralytics recipe.
-- No quantitative metrics (mAP@0.5, mAP@0.5:0.95) are reported. Adding
-  `external/yolov5/val.py` against `yolov5_retrained.pt` would cover
-  that.
 
 ## Data
 
