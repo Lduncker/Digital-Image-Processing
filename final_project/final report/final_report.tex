@@ -19,15 +19,10 @@
 \begin{abstract}
 We present a license plate detector built by fine-tuning
 YOLOv5s~\cite{jocher2020yolov5}, pretrained on MS-COCO, into a
-single-class plate detector. We warm-start the CSPDarknet backbone
-from the COCO checkpoint and train the detection head from scratch
-using CIoU regression loss and binary cross-entropy on objectness
-scores. Training uses the Kaggle license-plate dataset (4\,300
+single-class plate detector. Training uses the Kaggle license-plate dataset (4\,300
 training and 1\,000 validation images) at $640\!\times\!640$
 resolution for 20 epochs with Adam and a batch size of 32.
-Augmentations that cause label mismatches (shear, perspective warp)
-are removed, letting the model learn the spatial prior that plates
-appear in the lower frame. Evaluation on held-out images shows
+Evaluation on held-out images shows
 confident, tightly localized detections, with false positives
 suppressed by a simple confidence threshold. We further test the
 model on real highway dashcam footage and apply a per-detection
@@ -35,7 +30,7 @@ enhancement pipeline, contrast normalization, noise reduction,
 sharpening, and adaptive thresholding, to improve plate
 readability, though motion blur limits recoverable detail. Results
 show that commodity transfer learning on a general-purpose detector
-is sufficient for a practical plate-detection pipeline.
+is sufficient but requires fine-tuning for a practical plate-detection pipeline.
 \end{abstract}
 
 %-------------------------------------------------------------------------
@@ -44,7 +39,7 @@ is sufficient for a practical plate-detection pipeline.
 
 We were interested in building an automatic license plate detector
 motivated by a concrete goal: running the model on Lucian's dashcam
-footage to see how well a commodity detector handles real, unscripted
+footage to see how well a detector handles real-world
  driving.
 
 %-------------------------------------------------------------------------
@@ -60,12 +55,6 @@ our choice, combines a CSPDarknet backbone with a PANet
 neck~\cite{liu2018panet} and three detection heads at strides 8, 16,
 and 32.
 
-\paragraph{Alternative architectures.}
-SSD~\cite{liu2016ssd} and RetinaNet~\cite{lin2017focal} are competitive
-one-stage detectors. Faster R-CNN~\cite{ren2015faster} and
-DETR~\cite{carion2020detr} offer stronger accuracy baselines at higher
-inference cost. EfficientDet~\cite{tan2020efficientdet} jointly scales
-backbone and neck for a range of compute budgets.
 
 \paragraph{Plate-specific methods.}
 WPOD-NET~\cite{silva2018wpodnet} predicts a per-detection affine warp
@@ -84,7 +73,7 @@ We use a Kaggle license-plate dataset containing 4,300 training images and
 1,000 validation images, each annotated in YOLO format with bounding boxes
 around every visible plate.
 The pre-existing labels were the primary reason for choosing this dataset:
-manual annotation would have been prohibitively time-consuming, and using a
+manual annotation would have been  time-consuming, and using a
 detection model to label an unannotated dataset would have introduced
 additional failure risk beyond the scope of this project.
 The labeled validation split also enables quantitative performance evaluation.
@@ -92,7 +81,7 @@ The labeled validation split also enables quantitative performance evaluation.
 \subsection{Model}
 \label{sec:model}
 
-Because the dataset uses YOLO-format labels we elected to fine-tune
+Because the dataset uses bounding boxe labels we elected to fine-tune
 YOLOv5s~\cite{jocher2020yolov5}, the second-smallest model in the YOLOv5
 family, pretrained on MS-COCO.
 The small model size was chosen to support real-time inference at the typical
@@ -138,7 +127,7 @@ noise is reduced, the image is sharpened, and finally an adaptive threshold is
 applied to highlight edges.
 The enhanced crop is overlaid above the plate in the output video.
 This pipeline can produce a more human-readable plate image when sufficient
-detail is present, but motion blur from fast-moving vehicles often limits how
+detail is present, but motion blur from fast-moving vehicles and the fisheye lens on the dashcam often limits how
 much detail can be recovered (see \cref{fig:enhancement}).
 
 %-------------------------------------------------------------------------
@@ -162,14 +151,17 @@ We evaluated the trained detector on dashcam clips recorded during real driving.
 
 While several dashcam frames produce reasonable detections, a clear gap exists between the controlled dataset images and unscripted highway footage. Two notable failure cases illustrate this gap: frame~(g) shows a false positive triggered by a highway guardrail, whose rectangular metallic structure resembles a license plate in shape and reflectance; frame~(h) shows a false positive on a brightly lit roadside sign, where high-intensity illumination causes the detector to misfire on the rectangular region.
 
-These failures point to concrete remediation steps. First, raising the confidence threshold would suppress low-confidence false positives like those in (g) and (h) with minimal impact on true detections. Second, augmenting the training set with hard-negative examples --- guardrails, highway signs, and other rectangular roadside structures --- would teach the model to distinguish plate texture from confounding backgrounds. Third, adding brightness and glare augmentation during training would improve robustness to the high-contrast lighting conditions seen in dashcam footage.
+These failures point to concrete remediation steps. First, augmenting the training set with hard-negative examples --- guardrails, highway signs, and other rectangular roadside structures --- would teach the model to distinguish plate texture from confounding backgrounds. Second, adding brightness and glare augmentation during training would improve robustness to the high-contrast lighting conditions seen in dashcam footage.
 
 \subsection{Enhancement Pipeline Results}
 \label{sec:enhancement}
 
-For each detected plate, the enhancement pipeline (grayscale conversion, lighting normalization, contrast enhancement, noise reduction, sharpening, and adaptive thresholding) is applied to the full-resolution crop from the original $1920\!\times\!1080$ frame. Representative outputs are shown in \cref{fig:enhancement}. When the plate is sufficiently stationary in the frame, the pipeline produces a noticeably crisper image that aids human readability. In high-speed captures, however, motion blur limits recoverable detail and the pipeline provides only modest improvement.
+For each detected plate, the enhancement pipeline (grayscale conversion, lighting normalization, contrast enhancement, noise reduction, sharpening, and adaptive thresholding) is applied to the full-resolution crop from the original $1920\!\times\!1080$ frame. Representative dashcam outputs are shown in \cref{fig:enhancement}. When the plate is sufficiently stationary in the frame, the pipeline produces a noticeably crisper image that aids human readability. In high-speed captures, however, motion blur and fisheye distortion limits recoverable detail and the pipeline provides only modest improvement.
 
+\subsection{Validation Dataset Enhancement}
+\label{sec:val_enhancement}
 
+Applying the same pipeline to detections from the held-out validation set (Figures (k)--(m) in \cref{fig:all_results}) demonstrates the pipeline's full potential without the confound of motion blur. Because the dataset images are sharp, the pipeline consistently produces clean, high-contrast plate crops that are easily human-readable. The grayscale conversion and adaptive thresholding together isolate the character strokes clearly, confirming that the enhancement approach works as intended when the source image contains sufficient detail.
 
 %-------------------------------------------------------------------------
 \subsection{Conclusion}
@@ -181,50 +173,122 @@ partial-transfer approach --- warm-starting the backbone from COCO and
 training the detection heads from scratch --- proved sufficient for the
 task without any plate-specific inductive bias.
 
-The main remaining failure mode is low-confidence false positives on
-rectangular signage, which a simple confidence-threshold increase
-eliminates in practice.
+
+A  limitation of the dashcam evaluation is that the camera
+lens introduces fisheye (barrel) distortion, which warps the apparent
+shape of license plates near the frame edges. Future work should apply
+standard radial-distortion correction (camera calibration and
+undistortion) before inference to remove this geometric bias and
+potentially improve both detection confidence and enhancement quality.
 
 %-------------------------------------------------------------------------
-\clearpage
-\begin{figure*}[p]
+\begin{figure*}[!t]
   \centering
+  % --- Top block: Validation Dataset (left) | Dashcam Frames (right) ---
   \begin{minipage}[t]{0.49\textwidth}
     \centering
-    \textbf{Dataset Images}\\[0.4em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_0.png}\\[-0.1em]
-    {\small (a)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_1.png}\\[-0.1em]
-    {\small (b)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_4.png}\\[-0.1em]
-    {\small (c)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_2.png}\\[-0.1em]
-    {\small (d)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../output_3.png}\\[-0.1em]
-    {\small (e)}\\[0.4em]
-    \textbf{Enhancement Highlights}\\[0.4em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../enhancementHighlights1.png}\\[-0.1em]
-    {\small (k)}
+    \textbf{Validation Dataset}\\[0.4em]
+    % row 1
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../output_0.png}\\[-0.1em]
+      {\small (a)}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../output_1.png}\\[-0.1em]
+      {\small (b)}
+    \end{minipage}\\[0.15em]
+    % row 2
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../output_4.png}\\[-0.1em]
+      {\small (c)}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../output_2.png}\\[-0.1em]
+      {\small (d)}
+    \end{minipage}\\[0.15em]
+    % row 3
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../output_3.png}\\[-0.1em]
+      {\small (e)}
+    \end{minipage}
   \end{minipage}%
   \hfill%
   \begin{minipage}[t]{0.49\textwidth}
     \centering
-    \textbf{Dashcam Images}\\[0.4em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_0.png}\\[-0.1em]
-    {\small (f)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_1.png}\\[-0.1em]
-    {\small (g)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_2.png}\\[-0.1em]
-    {\small (h)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_3.png}\\[-0.1em]
-    {\small (i)}\\[0.2em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../outputVideo/dashcam_4.png}\\[-0.1em]
-    {\small (j)}\\[0.4em]
-    \phantom{\textbf{Enhancement Highlights}}\\[0.4em]
-    \includegraphics[width=\linewidth,height=0.12\textheight,keepaspectratio]{../enhancementHighlights2.png}\\[-0.1em]
-    {\small (l)}
+    \textbf{Dashcam Frames}\\[0.4em]
+    % row 1
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../dashcam_0.png}\\[-0.1em]
+      {\small (f)}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../dashcam_1.png}\\[-0.1em]
+      {\small (g)}
+    \end{minipage}\\[0.15em]
+    % row 2
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../dashcam_2.png}\\[-0.1em]
+      {\small (h)}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../dashcam_3.png}\\[-0.1em]
+      {\small (i)}
+    \end{minipage}\\[0.15em]
+    % row 3
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../dashcam_4.png}\\[-0.1em]
+      {\small (j)}
+    \end{minipage}
   \end{minipage}
-  \caption{All results. \textbf{Left}: dataset images (a)--(e) and enhancement highlight (k). \textbf{Right}: dashcam frames (f)--(j) and enhancement highlight (l).}
+
+  \vspace{0.8em}
+  \rule{\linewidth}{0.4pt}
+  \vspace{0.5em}
+
+  % --- Bottom block: License Plate Examples (left) | Enhancement Highlights (right) ---
+  \begin{minipage}[t]{0.55\textwidth}
+    \centering
+    \textbf{License Plate Examples (Validation Set)}\\[0.4em]
+    % row 1
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.2\textheight,keepaspectratio]{../licenseExamples/img29_det0.png}\\[-0.1em]
+      {\small (k)}
+    \end{minipage}%
+    \hfill%
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.2\textheight,keepaspectratio]{../licenseExamples/img45_det0.png}\\[-0.1em]
+      {\small (l)}
+    \end{minipage}\\[0.15em]
+    % row 2
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.2\textheight,keepaspectratio]{../licenseExamples/img6_det2.png}\\[-0.1em]
+      {\small (m)}
+    \end{minipage}
+  \end{minipage}%
+  \hfill%
+  \begin{minipage}[t]{0.42\textwidth}
+    \centering
+    \textbf{Enhancement Highlights (Dashcam)}\\[0.4em]
+    \includegraphics[width=\linewidth,height=0.18\textheight,keepaspectratio]{../enhancementHighlights1.png}\\[-0.1em]
+    {\small (n)}\\[0.2em]
+    \includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{../enhancementHighlights2.png}\\[-0.1em]
+    {\small (o)}
+  \end{minipage}
+
+
   \label{fig:qualitative}
   \label{fig:all_results}
   \label{fig:enhancement}
